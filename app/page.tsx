@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import removeBackground from '@imgly/background-removal';
 import { get, set } from 'idb-keyval';
 import { UploadCloud, Loader2, Trash2, X } from 'lucide-react';
 import { ClothingItem, Category } from '@/types';
@@ -9,7 +8,19 @@ import { processAndCompressImage } from '@/utils/imageProcessor';
 
 const STORAGE_KEY = 'closet_catalog_items';
 
-const MATERIALS = ['Cotone', 'Denim', 'Lana', 'Lino', 'Seta', 'Pelle', 'Pelle Scamosciata', 'Cashmere', 'Tecnico / Nylon', 'Velluto'];
+const MATERIALS = [
+  'Cotone',
+  'Denim',
+  'Lana',
+  'Lino',
+  'Seta',
+  'Pelle',
+  'Pelle Scamosciata',
+  'Cashmere',
+  'Tecnico / Nylon',
+  'Velluto',
+];
+
 const CATEGORIES: { value: Category; label: string }[] = [
   { value: 'headwear', label: 'Copricapo' },
   { value: 'top', label: 'Top / Giacche' },
@@ -42,6 +53,9 @@ export default function CatalogPage() {
 
     setLoading(true);
     try {
+      setStatus('Caricamento modulo IA...');
+      const { default: removeBackground } = await import('@imgly/background-removal');
+
       setStatus('Rimozione sfondo...');
       const transparentBlob = await removeBackground(file);
 
@@ -53,7 +67,7 @@ export default function CatalogPage() {
       setStatus('');
       setLoading(false);
     } catch (err) {
-      console.error(err);
+      console.error("Errore durante l'elaborazione:", err);
       setStatus('Errore elaborazione');
       setLoading(false);
     }
@@ -157,7 +171,9 @@ export default function CatalogPage() {
                     className="w-full liquid-control rounded-xl px-3 py-2 text-sm font-sans focus:outline-none"
                   >
                     {CATEGORIES.map((c) => (
-                      <option key={c.value} value={c.value} className="text-black">{c.label}</option>
+                      <option key={c.value} value={c.value} className="text-black">
+                        {c.label}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -169,7 +185,9 @@ export default function CatalogPage() {
                     className="w-full liquid-control rounded-xl px-3 py-2 text-sm font-sans focus:outline-none"
                   >
                     {MATERIALS.map((m) => (
-                      <option key={m} value={m} className="text-black">{m}</option>
+                      <option key={m} value={m} className="text-black">
+                        {m}
+                      </option>
                     ))}
                   </select>
                 </div>
