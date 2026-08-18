@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.7",
-    "@imgly/background-removal": "^1.4.5",
     "html-to-image": "^1.11.11",
     "idb-keyval": "^6.2.1",
     "lucide-react": "^0.395.0",
