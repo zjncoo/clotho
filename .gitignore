@@ -1,0 +1,15 @@
+node_modules
+/.next/
+/out/
+/build
+.DS_Store
+*.pem
+
+# PWA Files generati
+public/sw.js
+public/sw.js.map
+public/workbox-*.js
+public/workbox-*.js.map
+public/swe-worker-*.js
+
+.env*.local
