@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bg-grad-512" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#1E1B4B"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Apple Squircle Background -->
+  <rect width="512" height="512" rx="115" fill="url(#bg-grad-512)"/>
+  <rect x="2" y="2" width="508" height="508" rx="113" stroke="white" stroke-opacity="0.12" stroke-width="4"/>
+
+  <!-- Gancio Gruccia -->
+  <path d="M 256 195 A 41.5 41.5 0 1 1 214.5 175" stroke="#FFFFFF" stroke-width="24" stroke-linecap="round" fill="none"/>
+
+  <!-- Struttura Triangolare Gruccia -->
+  <path d="M 256 195 L 104 347 C 97.5 353.5 102.5 365.5 113.5 365.5 L 398.5 365.5 C 409.5 365.5 414.5 353.5 408 347 Z" stroke="#FFFFFF" stroke-width="24" stroke-linejoin="round" stroke-linecap="round" fill="none"/>
+
+  <!-- Stella Superiore -->
+  <path d="M 390 110 L 398 138 L 426 146 L 398 154 L 390 182 L 382 154 L 354 146 L 382 138 Z" fill="#38BDF8"/>
+  <circle cx="390" cy="146" r="4" fill="#FFFFFF"/>
+
+  <!-- Stella Inferiore -->
+  <path d="M 125 225 L 130 242 L 147 247 L 130 252 L 125 269 L 120 252 L 103 247 L 120 242 Z" fill="#38BDF8"/>
+  <circle cx="125" cy="247" r="2.5" fill="#FFFFFF"/>
+</svg>
