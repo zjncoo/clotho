@@ -16,6 +16,7 @@ import {
   Edit3,
   Check,
   Tag,
+  Palette,
   Settings as SettingsIcon,
 } from 'lucide-react';
 import { ClothingItem, Category } from '@/types';
@@ -23,9 +24,11 @@ import { processAndCompressImage } from '@/utils/imageProcessor';
 import { removeImageBackground } from '@/utils/bgRemover';
 import { COLOR_PALETTE, getColorHex } from '@/utils/colorPalette';
 import { MATERIALS, FILTER_MATERIALS } from '@/utils/materialConstants';
+import { useTheme } from '@/context/ThemeContext';
 import SettingsModal from '@/components/SettingsModal';
 import OnboardingModal from '@/components/OnboardingModal';
 import PWAInstallGuide from '@/components/PWAInstallGuide';
+import { exportWardrobeToFiles, importWardrobeFromFiles } from '@/utils/cloudStorage';
 
 const STORAGE_KEY = 'closet_catalog_items';
 
@@ -58,7 +61,8 @@ export default function WardrobePage() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedBrand, setSelectedBrand] = useState('All');
   const [selectedMaterial, setSelectedMaterial] = useState('All');
-  const [selectedColor, setSelectedColor] = useState('All');
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [isColorDropdownOpen, setIsColorDropdownOpen] = useState(false);
 
   // New Item Upload Form Modal State
   const [pendingItem, setPendingItem] = useState<{ image: string; color: string } | null>(null);
@@ -216,41 +220,27 @@ export default function WardrobePage() {
     }
   };
 
-  // Backup & Restore
-  const exportBackupJSON = () => {
-    const dataStr = JSON.stringify(items, null, 2);
-    const blob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `clotho-wardrobe-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-    showBackupNotice('Backup exported successfully!');
+  // Backup & Restore with iCloud / Files support
+  const exportBackupJSON = async () => {
+    const res = await exportWardrobeToFiles(items, userName, accent.hex);
+    if (res.success) {
+      showBackupNotice(`Wardrobe backup saved! (${items.length} pieces)`);
+    }
   };
 
-  const importBackupJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const importBackupJSON = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = '';
 
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
-      try {
-        const parsed = JSON.parse(evt.target?.result as string);
-        if (Array.isArray(parsed)) {
-          setItems(parsed);
-          await set(STORAGE_KEY, parsed);
-          showBackupNotice(`${parsed.length} pieces restored successfully!`);
-        } else {
-          alert('Invalid backup file format.');
-        }
-      } catch (err) {
-        console.error(err);
-        alert('Could not read backup file.');
-      }
-    };
-    reader.readAsText(file);
+    const res = await importWardrobeFromFiles(file);
+    if (res.success) {
+      setItems(res.items);
+      if (res.userName) setUserName(res.userName);
+      showBackupNotice(`${res.items.length} pieces restored from iCloud / Files!`);
+    } else {
+      alert(res.error || 'Could not restore backup file.');
+    }
   };
 
   const showBackupNotice = (msg: string) => {
@@ -258,19 +248,28 @@ export default function WardrobePage() {
     setTimeout(() => setBackupSuccess(null), 3200);
   };
 
+  const toggleFilterColor = (colorName: string) => {
+    if (selectedColors.includes(colorName)) {
+      setSelectedColors(selectedColors.filter((c) => c !== colorName));
+    } else {
+      setSelectedColors([...selectedColors, colorName]);
+    }
+  };
+
   const hasActiveFilters =
     searchTerm !== '' ||
     selectedCategory !== 'all' ||
     selectedBrand !== 'All' ||
     selectedMaterial !== 'All' ||
-    selectedColor !== 'All';
+    selectedColors.length > 0;
 
   const resetFilters = () => {
     setSearchTerm('');
     setSelectedCategory('all');
     setSelectedBrand('All');
     setSelectedMaterial('All');
-    setSelectedColor('All');
+    setSelectedColors([]);
+    setIsColorDropdownOpen(false);
   };
 
   // Available brands in the wardrobe
@@ -296,17 +295,21 @@ export default function WardrobePage() {
 
       const itemColors = item.colors && item.colors.length > 0 ? item.colors : item.color ? [item.color] : [];
       const matchCol =
-        selectedColor === 'All' ||
-        itemColors.some((c) => c.toLowerCase() === selectedColor.toLowerCase() || c.includes(selectedColor));
+        selectedColors.length === 0 ||
+        selectedColors.some((sc) =>
+          itemColors.some((ic) => ic.toLowerCase() === sc.toLowerCase() || ic.includes(sc))
+        );
 
       return matchSearch && matchCat && matchBrand && matchMat && matchCol;
     });
-  }, [items, searchTerm, selectedCategory, selectedBrand, selectedMaterial, selectedColor]);
+  }, [items, searchTerm, selectedCategory, selectedBrand, selectedMaterial, selectedColors]);
+
+  const { accent } = useTheme();
 
   const displayTitle = userName && userName !== 'Your' ? `${userName}'s Wardrobe` : 'Your Wardrobe';
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 pb-28 sm:pb-32 space-y-6">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-5 pb-28 sm:pb-32 space-y-5">
       {/* First-time iOS PWA installation guide prompt */}
       <PWAInstallGuide
         isOpen={isPWAGuideOpen ? true : undefined}
@@ -318,6 +321,14 @@ export default function WardrobePage() {
         isOpen={isTutorialOpen ? true : undefined}
         onClose={() => setIsTutorialOpen(false)}
         onNameSaved={(name) => setUserName(name)}
+        onWardrobeRestored={async () => {
+          const loaded = await get(STORAGE_KEY);
+          if (loaded && Array.isArray(loaded)) {
+            setItems(loaded);
+          }
+          const savedName = localStorage.getItem('clotho_user_name');
+          if (savedName) setUserName(savedName);
+        }}
       />
 
       {/* Settings Modal */}
@@ -347,22 +358,26 @@ export default function WardrobePage() {
         )}
       </AnimatePresence>
 
-      {/* Header */}
-      <header className="flex justify-between items-center gap-4">
+      {/* Header with Title and Action Row underneath */}
+      <header className="space-y-3">
         <div>
-          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight truncate max-w-[280px] sm:max-w-none">
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
             {displayTitle}
           </h1>
-          <p className="text-xs font-mono opacity-50 mt-0.5">
+          <p className="text-xs font-mono opacity-50 mt-1">
             {filteredItems.length} of {items.length} pieces cataloged
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Add Piece Primary Button */}
-          <label className="cursor-pointer liquid-control px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl text-xs font-semibold tracking-wide uppercase flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all hover:scale-102">
-            {loading ? <Loader2 className="w-4 h-4 animate-spin text-blue-500" /> : <UploadCloud className="w-4 h-4" />}
-            <span className="truncate max-w-[140px] sm:max-w-[200px]">{loading ? status : 'Add Piece'}</span>
+        {/* Action Row: Prominent Add Piece (with custom Accent Theme Color) + Settings Icon */}
+        <div className="flex items-center gap-2.5 w-full">
+          {/* Primary Add Piece Button */}
+          <label
+            style={{ backgroundColor: accent.hex }}
+            className="flex-1 cursor-pointer py-3.5 px-5 rounded-2xl text-white font-semibold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all hover:opacity-95"
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <UploadCloud className="w-4 h-4" />}
+            <span className="truncate">{loading ? status : 'Add Piece'}</span>
             <input
               ref={fileInputRef}
               type="file"
@@ -373,12 +388,13 @@ export default function WardrobePage() {
             />
           </label>
 
-          {/* Settings Button */}
+          {/* Settings Button directly to the right of Add Piece */}
           <button
+            type="button"
             onClick={() => setIsSettingsOpen(true)}
             aria-label="Settings"
             title="Settings & Preferences"
-            className="liquid-control p-2.5 sm:p-3 rounded-2xl text-xs font-mono flex items-center justify-center opacity-80 hover:opacity-100 transition-all hover:scale-105 active:scale-95"
+            className="liquid-control p-3.5 rounded-2xl flex items-center justify-center hover:opacity-100 transition-all active:scale-95 shadow-md flex-shrink-0"
           >
             <SettingsIcon className="w-4 h-4" />
           </button>
@@ -424,10 +440,10 @@ export default function WardrobePage() {
           ))}
         </div>
 
-        {/* Brand & Material Selectors */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+        {/* Brand, Material, and Multi-Color Dropdown Selectors */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
           {/* Brand Filter */}
-          <div className="liquid-control rounded-2xl px-3.5 py-2 flex items-center justify-between gap-2">
+          <div className="liquid-control rounded-2xl px-3.5 py-2.5 flex items-center justify-between gap-2">
             <span className="text-[11px] font-mono opacity-50 whitespace-nowrap flex items-center gap-1">
               <Tag className="w-3 h-3" /> Brand:
             </span>
@@ -453,7 +469,7 @@ export default function WardrobePage() {
           </div>
 
           {/* Material */}
-          <div className="liquid-control rounded-2xl px-3.5 py-2 flex items-center justify-between gap-2">
+          <div className="liquid-control rounded-2xl px-3.5 py-2.5 flex items-center justify-between gap-2">
             <span className="text-[11px] font-mono opacity-50 whitespace-nowrap">Material:</span>
             <div className="relative flex-1 flex items-center justify-end">
               <select
@@ -470,55 +486,135 @@ export default function WardrobePage() {
               <ChevronDown className="w-3.5 h-3.5 opacity-40 absolute right-0 pointer-events-none" />
             </div>
           </div>
-        </div>
 
-        {/* Color Swatches Bar */}
-        <div className="space-y-1.5 pt-1">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-mono opacity-50">Filter by Color:</span>
-            {selectedColor !== 'All' && (
-              <button
-                onClick={() => setSelectedColor('All')}
-                className="text-[10px] font-mono text-blue-400 hover:underline"
-              >
-                Clear color ({selectedColor})
-              </button>
-            )}
-          </div>
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
+          {/* Multi-Color Dropdown Filter */}
+          <div className="relative">
             <button
-              onClick={() => setSelectedColor('All')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-mono whitespace-nowrap transition-all flex items-center gap-1.5 ${
-                selectedColor === 'All'
-                  ? 'bg-black text-white dark:bg-white dark:text-black shadow-md font-semibold'
-                  : 'liquid-control opacity-60 hover:opacity-100'
+              type="button"
+              onClick={() => setIsColorDropdownOpen(!isColorDropdownOpen)}
+              className={`w-full liquid-control rounded-2xl px-3.5 py-2.5 flex items-center justify-between gap-2 transition-all ${
+                selectedColors.length > 0 ? 'ring-2 ring-blue-500/40' : ''
               }`}
             >
-              All Colors
+              <span className="text-[11px] font-mono opacity-50 whitespace-nowrap flex items-center gap-1">
+                <Palette className="w-3 h-3" /> Colors:
+              </span>
+
+              <div className="flex items-center gap-1.5 overflow-hidden">
+                {selectedColors.length === 0 ? (
+                  <span className="text-xs font-medium opacity-80">All Colors</span>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <div className="flex items-center -space-x-1">
+                      {selectedColors.slice(0, 3).map((colName) => (
+                        <span
+                          key={colName}
+                          className="w-3.5 h-3.5 rounded-full border border-white/40 shadow-xs"
+                          style={{ backgroundColor: getColorHex(colName) }}
+                          title={colName}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-xs font-semibold text-blue-400 font-mono">
+                      {selectedColors.length === 1 ? selectedColors[0] : `${selectedColors.length} selected`}
+                    </span>
+                  </div>
+                )}
+                <ChevronDown
+                  className={`w-3.5 h-3.5 opacity-40 transition-transform ${
+                    isColorDropdownOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              </div>
             </button>
 
-            {COLOR_PALETTE.map((c) => {
-              const isSelected = selectedColor === c.name;
-              return (
-                <button
-                  key={c.name}
-                  onClick={() => setSelectedColor(isSelected ? 'All' : c.name)}
-                  className={`px-2.5 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all flex items-center gap-2 flex-shrink-0 ${
-                    isSelected
-                      ? 'bg-black text-white dark:bg-white dark:text-black shadow-md ring-2 ring-blue-500 font-semibold'
-                      : 'liquid-control opacity-70 hover:opacity-100'
-                  }`}
+            {/* Dropdown Menu Popover */}
+            <AnimatePresence>
+              {isColorDropdownOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute z-30 right-0 sm:left-0 top-full mt-2 w-72 sm:w-80 liquid-glass rounded-2xl p-3 shadow-2xl border border-white/20 dark:border-white/10 space-y-2.5 max-h-72 overflow-y-auto overscroll-contain"
                 >
-                  <span
-                    className="w-3.5 h-3.5 rounded-md border border-white/20 shadow-xs flex-shrink-0"
-                    style={{ backgroundColor: c.hex }}
-                  />
-                  <span>{c.name}</span>
-                </button>
-              );
-            })}
+                  <div className="flex items-center justify-between pb-1.5 border-b border-black/5 dark:border-white/5">
+                    <span className="text-[11px] font-mono opacity-60">
+                      Select Colors ({selectedColors.length})
+                    </span>
+                    {selectedColors.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedColors([])}
+                        className="text-[10px] font-mono text-blue-400 hover:underline"
+                      >
+                        Clear All
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {COLOR_PALETTE.map((c) => {
+                      const isSelected = selectedColors.includes(c.name);
+                      return (
+                        <button
+                          key={c.name}
+                          type="button"
+                          onClick={() => toggleFilterColor(c.name)}
+                          className={`p-2 rounded-xl text-[11px] font-medium flex items-center gap-2 transition-all text-left ${
+                            isSelected
+                              ? 'bg-blue-500/15 text-blue-400 ring-1 ring-blue-500/50 font-semibold'
+                              : 'liquid-control opacity-75 hover:opacity-100'
+                          }`}
+                        >
+                          <span
+                            className="w-3.5 h-3.5 rounded-md border border-white/20 shadow-xs flex-shrink-0"
+                            style={{ backgroundColor: c.hex }}
+                          />
+                          <span className="truncate flex-1">{c.name}</span>
+                          {isSelected && <Check className="w-3 h-3 flex-shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="pt-1 border-t border-black/5 dark:border-white/5 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setIsColorDropdownOpen(false)}
+                      style={{ backgroundColor: accent.hex }}
+                      className="px-4 py-1.5 rounded-xl text-white font-semibold text-[11px] shadow-sm active:scale-95 transition-all"
+                    >
+                      Done
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
+
+        {/* Selected Color Badges Quick Row */}
+        {selectedColors.length > 0 && (
+          <div className="flex items-center gap-1.5 flex-wrap pt-1">
+            <span className="text-[10px] font-mono opacity-40">Active colors:</span>
+            {selectedColors.map((colName) => (
+              <button
+                key={colName}
+                type="button"
+                onClick={() => toggleFilterColor(colName)}
+                className="liquid-control px-2.5 py-1 rounded-xl text-[10px] font-mono flex items-center gap-1.5 hover:opacity-80 transition-opacity"
+              >
+                <span
+                  className="w-2.5 h-2.5 rounded-full border border-white/20"
+                  style={{ backgroundColor: getColorHex(colName) }}
+                />
+                <span>{colName}</span>
+                <X className="w-2.5 h-2.5 opacity-50" />
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Reset Filters */}
         {hasActiveFilters && (
@@ -770,7 +866,8 @@ export default function WardrobePage() {
                 <button
                   type="button"
                   onClick={handleSaveEditedItem}
-                  className="flex-1 py-3 text-xs font-semibold uppercase tracking-wider bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-lg transition-all"
+                  style={{ backgroundColor: accent.hex }}
+                  className="flex-1 py-3 text-xs font-semibold uppercase tracking-wider text-white rounded-xl shadow-lg transition-all active:scale-95"
                 >
                   Save Changes
                 </button>
@@ -911,7 +1008,8 @@ export default function WardrobePage() {
                 <button
                   type="button"
                   onClick={handleSaveNewItem}
-                  className="flex-1 py-3 text-xs font-semibold uppercase tracking-wider bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-lg transition-all"
+                  style={{ backgroundColor: accent.hex }}
+                  className="flex-1 py-3 text-xs font-semibold uppercase tracking-wider text-white rounded-xl shadow-lg transition-all active:scale-95"
                 >
                   Save Piece
                 </button>

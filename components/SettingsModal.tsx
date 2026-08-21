@@ -13,10 +13,14 @@ import {
   Smartphone,
   HelpCircle,
   ExternalLink,
-  Check,
   CheckCircle2,
+  Palette,
+  Check,
+  MessageSquarePlus,
 } from 'lucide-react';
-import { useTheme } from '@/context/ThemeContext';
+import ColorPicker from './ColorPicker';
+import FeedbackModal from './FeedbackModal';
+import { useTheme, ACCENT_PRESETS } from '@/context/ThemeContext';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -39,9 +43,10 @@ export default function SettingsModal({
   onOpenPWAGuide,
   onOpenTutorial,
 }: SettingsModalProps) {
-  const { theme, toggleTheme } = useTheme();
+  const { theme, toggleTheme, accent, setAccentId, setCustomAccentHex } = useTheme();
   const [tempName, setTempName] = useState(userName);
   const [savedNameNotice, setSavedNameNotice] = useState(false);
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const backupInputRef = useRef<HTMLInputElement>(null);
 
   const handleSaveName = (e: React.FormEvent) => {
@@ -67,12 +72,15 @@ export default function SettingsModal({
             {/* Header */}
             <div className="flex justify-between items-center pb-2 border-b border-black/5 dark:border-white/5">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl liquid-control flex items-center justify-center text-blue-400">
+                <div
+                  className="w-8 h-8 rounded-xl liquid-control flex items-center justify-center"
+                  style={{ color: accent.hex }}
+                >
                   <Settings className="w-4 h-4" />
                 </div>
                 <div>
                   <h2 className="text-base font-bold tracking-tight">Settings & Preferences</h2>
-                  <p className="text-[10px] font-mono opacity-50">Personalization & Backups</p>
+                  <p className="text-[10px] font-mono opacity-50">Personalization & Theme</p>
                 </div>
               </div>
               <button
@@ -88,7 +96,7 @@ export default function SettingsModal({
               <div className="liquid-control rounded-2xl p-4 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 font-medium">
-                    <User className="w-3.5 h-3.5 text-blue-400" />
+                    <User className="w-3.5 h-3.5" style={{ color: accent.hex }} />
                     <span>Your Name</span>
                   </div>
                   {savedNameNotice && (
@@ -108,19 +116,40 @@ export default function SettingsModal({
                   />
                   <button
                     type="submit"
-                    className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[11px] shadow-sm transition-all"
+                    style={{ backgroundColor: accent.hex }}
+                    className="px-4 py-2 rounded-xl text-white font-semibold text-[11px] shadow-sm transition-all active:scale-95"
                   >
                     Save
                   </button>
                 </form>
               </div>
 
-              {/* 2. Appearance / Theme */}
+              {/* 2. Theme Accent Color */}
+              <div className="liquid-control rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 font-medium">
+                    <Palette className="w-3.5 h-3.5" style={{ color: accent.hex }} />
+                    <span>Accent Color Theme</span>
+                  </div>
+                  <span
+                    className="w-3 h-3 rounded-full border border-white/20 shadow-xs"
+                    style={{ backgroundColor: accent.hex }}
+                  />
+                </div>
+
+                {/* 2D Photoshop Color Picker */}
+                <ColorPicker
+                  color={accent.hex}
+                  onChange={(hex) => setCustomAccentHex(hex)}
+                />
+              </div>
+
+              {/* 3. Appearance / Light & Dark Theme */}
               <div className="liquid-control rounded-2xl p-4 flex items-center justify-between">
                 <div className="space-y-0.5">
                   <span className="font-medium text-sm flex items-center gap-2">
                     {theme === 'dark' ? <Moon className="w-3.5 h-3.5 text-indigo-400" /> : <Sun className="w-3.5 h-3.5 text-amber-500" />}
-                    <span>Theme Appearance</span>
+                    <span>Theme Mode</span>
                   </span>
                   <p className="text-[10px] opacity-50">
                     Currently in {theme === 'dark' ? 'Dark Mode' : 'Light Mode'}
@@ -136,12 +165,12 @@ export default function SettingsModal({
                 </button>
               </div>
 
-              {/* 3. Data & Storage Backup */}
+              {/* 4. Data & Storage Backup */}
               <div className="liquid-control rounded-2xl p-4 space-y-3">
                 <div className="space-y-0.5">
-                  <span className="font-medium text-sm">Wardrobe Data & Storage</span>
+                  <span className="font-medium text-sm">iCloud Drive & Files Backup</span>
                   <p className="text-[10px] opacity-50">
-                    Export your full catalog as a JSON backup or restore past data.
+                    Save your wardrobe folder/file to iCloud Drive or open past data when switching phones.
                   </p>
                 </div>
 
@@ -155,16 +184,16 @@ export default function SettingsModal({
                     className="liquid-control py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 font-semibold text-[11px] hover:scale-[1.02] active:scale-95 transition-all"
                   >
                     <Download className="w-3.5 h-3.5" />
-                    <span>Export JSON</span>
+                    <span>Save to Files</span>
                   </button>
 
                   <label className="cursor-pointer liquid-control py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 font-semibold text-[11px] hover:scale-[1.02] active:scale-95 transition-all">
                     <Upload className="w-3.5 h-3.5" />
-                    <span>Import JSON</span>
+                    <span>Open from Files</span>
                     <input
                       ref={backupInputRef}
                       type="file"
-                      accept=".json"
+                      accept=".json,application/json"
                       className="hidden"
                       onChange={(e) => {
                         onImportBackup(e);
@@ -175,8 +204,22 @@ export default function SettingsModal({
                 </div>
               </div>
 
-              {/* 4. Quick Guides */}
+              {/* 5. Quick Guides & Support */}
               <div className="liquid-control rounded-2xl p-4 space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setIsFeedbackOpen(true)}
+                  className="w-full flex items-center justify-between text-left p-1.5 hover:opacity-80 transition-opacity"
+                >
+                  <span className="flex items-center gap-2">
+                    <MessageSquarePlus className="w-3.5 h-3.5" style={{ color: accent.hex }} />
+                    <span>Report a Bug / Suggest a Feature</span>
+                  </span>
+                  <ExternalLink className="w-3 h-3 opacity-40" />
+                </button>
+
+                <div className="w-full h-[1px] bg-black/5 dark:bg-white/5" />
+
                 <button
                   type="button"
                   onClick={() => {
@@ -186,7 +229,7 @@ export default function SettingsModal({
                   className="w-full flex items-center justify-between text-left p-1.5 hover:opacity-80 transition-opacity"
                 >
                   <span className="flex items-center gap-2">
-                    <Smartphone className="w-3.5 h-3.5 text-blue-400" />
+                    <Smartphone className="w-3.5 h-3.5" style={{ color: accent.hex }} />
                     <span>How to Install on iPhone</span>
                   </span>
                   <ExternalLink className="w-3 h-3 opacity-40" />
@@ -203,14 +246,14 @@ export default function SettingsModal({
                   className="w-full flex items-center justify-between text-left p-1.5 hover:opacity-80 transition-opacity"
                 >
                   <span className="flex items-center gap-2">
-                    <HelpCircle className="w-3.5 h-3.5 text-purple-400" />
+                    <HelpCircle className="w-3.5 h-3.5" style={{ color: accent.hex }} />
                     <span>Replay Interactive App Tour</span>
                   </span>
                   <ExternalLink className="w-3 h-3 opacity-40" />
                 </button>
               </div>
 
-              {/* 5. Credits */}
+              {/* 6. Credits */}
               <div className="text-center pt-2 space-y-1">
                 <p className="text-[10px] opacity-40 tracking-wider">CLOTHO CREATIVE STUDIO</p>
                 <a
@@ -227,6 +270,13 @@ export default function SettingsModal({
           </motion.div>
         </div>
       )}
+
+      {/* Integrated Google Form Feedback Modal */}
+      <FeedbackModal
+        isOpen={isFeedbackOpen}
+        onClose={() => setIsFeedbackOpen(false)}
+        defaultUserName={userName}
+      />
     </AnimatePresence>
   );
 }

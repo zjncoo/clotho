@@ -17,6 +17,7 @@ import { toPng } from 'html-to-image';
 import Link from 'next/link';
 import { COLOR_PALETTE, getColorHex } from '@/utils/colorPalette';
 import { FILTER_MATERIALS } from '@/utils/materialConstants';
+import { useTheme } from '@/context/ThemeContext';
 
 const STORAGE_KEY = 'closet_catalog_items';
 
@@ -49,6 +50,8 @@ export default function OutfitStudioPage() {
   const [drawerBrand, setDrawerBrand] = useState('All');
   const [drawerMaterial, setDrawerMaterial] = useState('All');
   const [drawerColor, setDrawerColor] = useState('All');
+
+  const { accent } = useTheme();
 
   const mannequinRef = useRef<HTMLDivElement>(null);
 
@@ -495,7 +498,8 @@ export default function OutfitStudioPage() {
                 )}
                 <button
                   onClick={() => setActiveDrawerCategory(null)}
-                  className="flex-1 py-3 text-xs font-semibold uppercase tracking-wider bg-blue-600 hover:bg-blue-500 text-white rounded-2xl shadow-lg transition-all"
+                  style={{ backgroundColor: accent.hex }}
+                  className="flex-1 py-3 text-xs font-semibold uppercase tracking-wider text-white rounded-2xl shadow-lg transition-all active:scale-95"
                 >
                   Done ({currentSlotSelectedItems.length})
                 </button>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Share, PlusSquare, Check, X, Smartphone, ArrowUpRight } from 'lucide-react';
+import { useTheme } from '@/context/ThemeContext';
 
 export default function PWAInstallGuide({
   isOpen,
@@ -13,6 +14,7 @@ export default function PWAInstallGuide({
   onClose?: () => void;
   isAutomatic?: boolean;
 }) {
+  const { accent } = useTheme();
   const [internalOpen, setInternalOpen] = useState(false);
 
   useEffect(() => {
@@ -138,7 +140,8 @@ export default function PWAInstallGuide({
               <button
                 type="button"
                 onClick={handleDismiss}
-                className="w-full py-3.5 text-xs font-semibold uppercase tracking-wider bg-blue-600 hover:bg-blue-500 text-white rounded-2xl shadow-lg transition-all"
+                style={{ backgroundColor: accent.hex }}
+                className="w-full py-3.5 text-xs font-semibold uppercase tracking-wider text-white rounded-2xl shadow-lg transition-all active:scale-95"
               >
                 Got It
               </button>
