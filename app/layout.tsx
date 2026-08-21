@@ -29,7 +29,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <head>
         <link rel="icon" href="/icons/icon-light.svg" media="(prefers-color-scheme: light)" />
         <link rel="icon" href="/icons/icon-dark.svg" media="(prefers-color-scheme: dark)" />

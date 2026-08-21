@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>clotho — digital wardrobe & outfit studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* ==========================================================================
+       HAUTE-COUTURE EDITORIAL DESIGN SYSTEM (Mobile-First Swiss Architecture)
+       ========================================================================== */
+    :root {
+      --bg: #ffffff;
+      --surface: #f7f7f9;
+      --surface-elevated: #ffffff;
+      --text: #09090b;
+      --text-muted: #64748b;
+      --border: rgba(0, 0, 0, 0.08);
+      --border-strong: rgba(0, 0, 0, 0.16);
+      --accent: #000000;
+      --accent-blue: #2563eb;
+      --accent-glow: rgba(37, 99, 235, 0.12);
+      --font-sans: 'Neue Haas Grotesk Display Pro', 'Neue Haas Grotesk Text Pro', 'Neue Haas Grotesk', 'Helvetica Neue', -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+      --font-mono: 'JetBrains Mono', SFMono-Regular, Menlo, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      font-size: 16px;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.45;
+      overflow-x: hidden;
+      padding-bottom: env(safe-area-inset-bottom, 20px);
+    }
+
+    /* --------------------------------------------------------------------------
+       Sticky Top Header
+       -------------------------------------------------------------------------- */
+    .masthead {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    @media (min-width: 640px) {
+      .masthead {
+        padding: 14px 32px;
+      }
+    }
+
+    .masthead-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .masthead-logo {
+      font-size: 17px;
+      font-weight: 900;
+      letter-spacing: -0.05em;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .masthead-badge {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      padding: 3px 8px;
+      background: rgba(0, 0, 0, 0.05);
+      border-radius: 999px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .masthead-cta {
+      background: #000000;
+      color: #ffffff;
+      text-decoration: none;
+      padding: 7px 16px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .masthead-cta:active {
+      transform: scale(0.96);
+    }
+
+    /* --------------------------------------------------------------------------
+       Layout Container
+       -------------------------------------------------------------------------- */
+    .container {
+      width: 100%;
+      padding: 24px 16px 80px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+    }
+
+    @media (min-width: 1024px) {
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 56px 40px 120px 40px;
+        display: grid;
+        grid-template-columns: 380px 200px 1fr;
+        gap: 48px;
+        align-items: start;
+      }
+    }
+
+    /* --------------------------------------------------------------------------
+       Hero Section
+       -------------------------------------------------------------------------- */
+    .col-hero {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    @media (min-width: 1024px) {
+      .col-hero {
+        position: sticky;
+        top: 76px;
+        gap: 32px;
+      }
+    }
+
+    .hero-tag {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent-blue);
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .hero-title {
+      font-size: clamp(56px, 16vw, 84px);
+      font-weight: 900;
+      letter-spacing: -0.06em;
+      line-height: 0.85;
+      color: #000000;
+    }
+
+    .hero-sub {
+      font-size: clamp(18px, 4vw, 22px);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: #18181b;
+      line-height: 1.25;
+      margin-top: 4px;
+    }
+
+    .hero-desc {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #4b5563;
+      font-weight: 450;
+    }
+
+    /* Killer Stats Ticker */
+    .hero-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      padding: 12px 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stat-val {
+      font-size: 18px;
+      font-weight: 900;
+      font-family: var(--font-mono);
+      letter-spacing: -0.03em;
+      color: #000000;
+    }
+
+    .stat-lbl {
+      font-size: 9px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+    }
+
+    /* Action Buttons */
+    .action-box {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 8px;
+    }
+
+    .btn-main {
+      background: #000000;
+      color: #ffffff;
+      padding: 15px 18px;
+      border-radius: 14px;
+      font-size: 13px;
+      font-weight: 800;
+      text-decoration: none;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-main:hover {
+      background: #27272a;
+    }
+
+    .btn-main:active {
+      transform: scale(0.97);
+    }
+
+    .btn-outline {
+      background: #ffffff;
+      color: var(--text);
+      border: 1px solid rgba(0, 0, 0, 0.18);
+      padding: 15px 16px;
+      border-radius: 14px;
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: background 0.15s ease;
+    }
+
+    .btn-outline:active {
+      background: #f4f4f5;
+    }
+
+    /* --------------------------------------------------------------------------
+       Middle Column (Curator & Suite Info)
+       -------------------------------------------------------------------------- */
+    .col-info {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      background: #fafafa;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+    }
+
+    @media (min-width: 1024px) {
+      .col-info {
+        background: transparent;
+        border: none;
+        border-left: 1px solid var(--border);
+        border-radius: 0;
+        padding: 0 0 0 24px;
+        gap: 32px;
+        position: sticky;
+        top: 76px;
+      }
+    }
+
+    .info-title {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      font-weight: 800;
+    }
+
+    .info-text {
+      line-height: 1.5;
+      color: #333333;
+      font-size: 11px;
+    }
+
+    .suite-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      margin-top: 6px;
+    }
+
+    .suite-list li {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .suite-list li::before {
+      content: '✦';
+      color: var(--accent-blue);
+      font-size: 8px;
+    }
+
+    /* --------------------------------------------------------------------------
+       Right Column: Visual Feature Showcase Cards
+       -------------------------------------------------------------------------- */
+    .col-gallery {
+      display: flex;
+      flex-direction: column;
+      gap: 36px;
+    }
+
+    @media (min-width: 1024px) {
+      .col-gallery {
+        gap: 52px;
+      }
+    }
+
+    /* Billboard */
+    .billboard {
+      background: #090a0c;
+      color: #ffffff;
+      border-radius: 24px;
+      padding: 32px 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 28px;
+      position: relative;
+      overflow: hidden;
+      background-image: radial-gradient(circle at 90% 10%, rgba(99, 102, 241, 0.45), transparent 60%), radial-gradient(circle at 10% 90%, rgba(37, 99, 235, 0.2), transparent 50%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+    }
+
+    @media (min-width: 640px) {
+      .billboard {
+        padding: 48px 36px;
+        min-height: 340px;
+      }
+    }
+
+    .billboard-tag {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      opacity: 0.7;
+    }
+
+    .billboard-heading {
+      font-size: clamp(34px, 9vw, 52px);
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      line-height: 0.92;
+      text-transform: uppercase;
+    }
+
+    .billboard-badge {
+      background: #facc15;
+      color: #000000;
+      padding: 6px 12px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 800;
+      width: fit-content;
+      transform: rotate(-1.5deg);
+      border-radius: 4px;
+      margin-top: 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .billboard-sub {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      opacity: 0.6;
+    }
+
+    /* Big Feature Showcase Card */
+    .feature-card {
+      background: #ffffff;
+      border: 1px solid var(--border-strong);
+      border-radius: 24px;
+      padding: 24px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.03);
+      position: relative;
+    }
+
+    @media (min-width: 640px) {
+      .feature-card {
+        padding: 36px 32px;
+        gap: 28px;
+      }
+    }
+
+    .feature-tag-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+    }
+
+    .feature-pill-badge {
+      background: #000000;
+      color: #ffffff;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+
+    .feature-title {
+      font-size: clamp(22px, 5.5vw, 30px);
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      color: #09090b;
+    }
+
+    .feature-desc {
+      font-size: 13.5px;
+      color: #4b5563;
+      line-height: 1.6;
+    }
+
+    /* --------------------------------------------------------------------------
+       KILLER 1: AUTO-CUT BEFORE & AFTER (Ultra-Visual)
+       -------------------------------------------------------------------------- */
+    .autocut-comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 6px;
+    }
+
+    .compare-side {
+      border-radius: 16px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      aspect-ratio: 1 / 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .compare-before {
+      background: #e4e4e7;
+      border: 1px solid rgba(0,0,0,0.1);
+      background-image: repeating-linear-gradient(45deg, #e4e4e7, #e4e4e7 10px, #d4d4d8 10px, #d4d4d8 20px);
+    }
+
+    .compare-after {
+      background: #ffffff;
+      border: 2px solid #000000;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+    }
+
+    .compare-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 800;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 999px;
+      width: fit-content;
+    }
+
+    .label-before {
+      background: rgba(0,0,0,0.6);
+      color: #ffffff;
+    }
+
+    .label-after {
+      background: #16a34a;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .garment-center-icon {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .compare-footer {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-weight: 700;
+    }
+
+    /* --------------------------------------------------------------------------
+       KILLER 2: 7-SLOT MANNEQUIN CANVAS (Live Dressing Room)
+       -------------------------------------------------------------------------- */
+    .mannequin-dressing-room {
+      background: #f4f6fa;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 20px;
+      padding: 20px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      align-items: center;
+    }
+
+    .dressing-room-header {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+
+    .mannequin-stack {
+      width: 100%;
+      max-width: 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .mannequin-item-pill {
+      background: #ffffff;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 12px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+    }
+
+    .mannequin-item-pill:hover {
+      transform: translateX(4px);
+    }
+
+    .mannequin-item-pill.equipped {
+      background: #000000;
+      color: #ffffff;
+      border-color: #000000;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+    }
+
+    .slot-num {
+      font-size: 9px;
+      opacity: 0.6;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .slot-title {
+      font-weight: 800;
+      margin-left: 8px;
+      margin-right: auto;
+    }
+
+    /* --------------------------------------------------------------------------
+       KILLER 3: MULTI-COLOR TONAL DRAWER
+       -------------------------------------------------------------------------- */
+    .color-tonal-box {
+      background: #ffffff;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 18px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+    }
+
+    .color-drawer-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .color-swatches-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    @media (min-width: 640px) {
+      .color-swatches-grid {
+        grid-template-columns: repeat(6, 1fr);
+      }
+    }
+
+    .color-card-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: #f8f8f9;
+      border: 1px solid rgba(0,0,0,0.06);
+      font-weight: 600;
+    }
+
+    .color-card-item.selected {
+      border-color: #000000;
+      background: #000000;
+      color: #ffffff;
+      font-weight: 800;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 1px solid rgba(0,0,0,0.15);
+      flex-shrink: 0;
+    }
+
+    /* --------------------------------------------------------------------------
+       KILLER 4: ICLOUD & LOCAL PRIVACY (No Cloud Tracking)
+       -------------------------------------------------------------------------- */
+    .privacy-badge-card {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+    }
+
+    .privacy-badge-card i {
+      color: #16a34a;
+      flex-shrink: 0;
+    }
+
+    /* --------------------------------------------------------------------------
+       Bottom Launch Banner
+       -------------------------------------------------------------------------- */
+    .cta-banner {
+      background: #000000;
+      color: #ffffff;
+      border-radius: 24px;
+      padding: 40px 24px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    .cta-banner h3 {
+      font-size: clamp(26px, 7vw, 40px);
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      line-height: 1.05;
+    }
+
+    .cta-banner p {
+      font-size: 14px;
+      color: #a1a1aa;
+      max-width: 480px;
+      line-height: 1.5;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 24px 16px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+      text-align: center;
+    }
+
+    @media (min-width: 640px) {
+      footer {
+        flex-direction: row;
+        justify-content: space-between;
+        padding: 32px 40px;
+      }
+    }
+
+    footer a {
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Sticky Header -->
+  <header class="masthead">
+    <div class="masthead-brand">
+      <span class="masthead-logo">clotho</span>
+      <span class="masthead-badge">local styling studio</span>
+    </div>
+    <div>
+      <a href="https://clotho-app.vercel.app" class="masthead-cta" target="_blank">
+        <span>Open App</span>
+        <i data-lucide="arrow-right" style="width: 12px; height: 12px;"></i>
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <div class="container">
+
+    <!-- 1. Hero Column -->
+    <section class="col-hero">
+      <div>
+        <div class="hero-tag">
+          <i data-lucide="sparkles" style="width: 12px; height: 12px;"></i>
+          <span>Curated Digital Wardrobe</span>
+        </div>
+
+        <h1 class="hero-title">clotho</h1>
+        <h2 class="hero-sub">Dress with intention.<br />Audition before you dress.</h2>
+
+        <p class="hero-desc" style="margin-top: 12px;">
+          Turn messy closet piles into a high-fashion runway lookbook. On-device AI background removal, 7-slot mannequin layering, multi-color palette matching, and offline iCloud sync.
+        </p>
+      </div>
+
+      <!-- Quick Punchy Stats -->
+      <div class="hero-stats">
+        <div class="stat-item">
+          <span class="stat-val">0.2s</span>
+          <span class="stat-lbl">AI Cutout Speed</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-val">7 Slots</span>
+          <span class="stat-lbl">Mannequin Layering</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-val">100%</span>
+          <span class="stat-lbl">Private Offline</span>
+        </div>
+      </div>
+
+      <div class="action-box">
+        <div class="btn-row">
+          <a href="https://clotho-app.vercel.app" class="btn-main" target="_blank">
+            <span>Open clotho</span>
+            <i data-lucide="arrow-right" style="width: 14px; height: 14px;"></i>
+          </a>
+          <a href="#features" class="btn-outline">
+            <span>Explore Features</span>
+          </a>
+        </div>
+        <p style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); text-align: center;">
+          Free • Zero account required • Add to iPhone Home Screen
+        </p>
+      </div>
+    </section>
+
+    <!-- 2. Minimalist Philosophy Column (Now Large & High-Prominence) -->
+    <aside class="col-info">
+      <div>
+        <div class="info-title" style="font-size: 11px; color: var(--accent-blue);">PHILOSOPHY [01]</div>
+        <h2 style="font-size: clamp(20px, 4.5vw, 24px); font-weight: 800; letter-spacing: -0.03em; line-height: 1.25; margin-top: 6px; color: #09090b;">
+          Wardrobe intentionality over mindless shopping.
+        </h2>
+        <p class="info-text" style="font-size: 13px; line-height: 1.6; color: #4b5563; margin-top: 10px;">
+          Stop staring at a full closet with "nothing to wear." Digitize what you own, discover new layering formulas, and build signatures that feel authentic to you.
+        </p>
+      </div>
+
+      <div style="border-top: 1px solid var(--border); padding-top: 16px;">
+        <div class="info-title">THE SUITE</div>
+        <ul class="suite-list">
+          <li>ON-DEVICE AUTO-CUT</li>
+          <li>7-SLOT MANNEQUIN STUDIO</li>
+          <li>MULTI-COLOR TONAL DRAWER</li>
+          <li>32 NOBLE FABRIC TAGS</li>
+          <li>ICLOUD FILES BACKUP</li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- 3. Magazine / High-Impact Killer Feature Cards -->
+    <main class="col-gallery" id="features">
+
+      <!-- Billboard Header -->
+      <div class="billboard">
+        <div class="billboard-tag">CLOTHO STUDIO —— 2026</div>
+        <div>
+          <h2 class="billboard-heading">NEVER THROW 10 OUTFITS<br />ON YOUR BED AGAIN.</h2>
+          <div class="billboard-badge">END CLOSET CHAOS FOREVER</div>
+        </div>
+        <div class="billboard-sub">Instant studio cutout engine • 7-layer canvas • Local iCloud sovereignty</div>
+      </div>
+
+      <!-- ===================================================================
+           KILLER FEATURE 1: 7-SLOT MANNEQUIN CANVAS
+           =================================================================== -->
+      <article class="feature-card">
+        <div class="feature-tag-row">
+          <span>FEATURE 01</span>
+          <span class="feature-pill-badge">THE STYLING STUDIO</span>
+        </div>
+
+        <div>
+          <h3 class="feature-title">Audition silhouettes & proportions on a live silhouette.</h3>
+          <p class="feature-desc" style="margin-top: 6px;">
+            Tap any slot on the mannequin to test outfits from your closet. Check how collar necklines interact with knitwear, see jacket lengths over trousers, and finish with jewelry.
+          </p>
+        </div>
+
+        <!-- Live Mannequin Dressing Room Mockup -->
+        <div class="mannequin-dressing-room">
+          <div class="dressing-room-header">
+            <span>CLOTHO CANVAS — 7-SLOT LAYER STACK</span>
+            <span>HIGH-RES POSTER EXPORT</span>
+          </div>
+
+          <div class="mannequin-stack">
+            <div class="mannequin-item-pill">
+              <span class="slot-num">01. Headwear</span>
+              <span class="slot-title">Wool Ribbed Beanie</span>
+              <i data-lucide="sparkles" style="width: 13px; height: 13px; opacity: 0.4;"></i>
+            </div>
+            <div class="mannequin-item-pill">
+              <span class="slot-num">02. Necklaces</span>
+              <span class="slot-title">Silver 925 Chain (50cm)</span>
+              <i data-lucide="sparkles" style="width: 13px; height: 13px; opacity: 0.4;"></i>
+            </div>
+            <div class="mannequin-item-pill equipped">
+              <span class="slot-num" style="color: #fff; opacity: 0.7;">03. Tops</span>
+              <span class="slot-title">Maison Margiela Cashmere Knit</span>
+              <i data-lucide="check" style="width: 14px; height: 14px; color: #4ade80;"></i>
+            </div>
+            <div class="mannequin-item-pill equipped">
+              <span class="slot-num" style="color: #fff; opacity: 0.7;">04. Bottoms</span>
+              <span class="slot-title">Pleated Wide Wool Trousers</span>
+              <i data-lucide="check" style="width: 14px; height: 14px; color: #4ade80;"></i>
+            </div>
+            <div class="mannequin-item-pill">
+              <span class="slot-num">05. Footwear</span>
+              <span class="slot-title">Square Toe Leather Boots</span>
+              <i data-lucide="sparkles" style="width: 13px; height: 13px; opacity: 0.4;"></i>
+            </div>
+            <div class="mannequin-item-pill">
+              <span class="slot-num">06. Bag</span>
+              <span class="slot-title">Minimalist Leather Tote</span>
+              <i data-lucide="sparkles" style="width: 13px; height: 13px; opacity: 0.4;"></i>
+            </div>
+            <div class="mannequin-item-pill">
+              <span class="slot-num">07. Wrist</span>
+              <span class="slot-title">Silver Cuff Bracelet</span>
+              <i data-lucide="sparkles" style="width: 13px; height: 13px; opacity: 0.4;"></i>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- ===================================================================
+           KILLER FEATURE 2: AUTO-CUT STUDIO (BEFORE & AFTER)
+           =================================================================== -->
+      <article class="feature-card">
+        <div class="feature-tag-row">
+          <span>FEATURE 02</span>
+          <span class="feature-pill-badge">ON-DEVICE AUTO-CUT</span>
+        </div>
+
+        <div>
+          <h3 class="feature-title">From your bedroom floor to runway cutout in 0.2s.</h3>
+          <p class="feature-desc" style="margin-top: 6px;">
+            Snap a quick photo of your garment anywhere. clotho instantly erases the messy background, extracts the primary and secondary color palette, and categorizes the piece.
+          </p>
+        </div>
+
+        <!-- Before & After Visual Cutout Comparison -->
+        <div class="autocut-comparison">
+          <div class="compare-side compare-before">
+            <span class="compare-label label-before">Original Photo</span>
+            <div class="garment-center-icon">
+              <i data-lucide="camera" style="width: 48px; height: 48px; opacity: 0.4;"></i>
+            </div>
+            <div class="compare-footer" style="color: #666;">
+              <span>Bed / Clutter</span>
+              <span>Messy Background</span>
+            </div>
+          </div>
+
+          <div class="compare-side compare-after">
+            <span class="compare-label label-after">
+              <i data-lucide="scissors" style="width: 9px; height: 9px;"></i>
+              <span>clotho Auto-Cut</span>
+            </span>
+            <div class="garment-center-icon">
+              <i data-lucide="shirt" style="width: 60px; height: 60px; color: #000; stroke-width: 1.25;"></i>
+            </div>
+            <div class="compare-footer" style="color: #000;">
+              <span>100% Cashmere</span>
+              <span style="color: #16a34a;">Pure Alpha Cutout</span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- ===================================================================
+           KILLER FEATURE 3: MULTI-COLOR DRAWER & TONAL DRESSING
+           =================================================================== -->
+      <article class="feature-card">
+        <div class="feature-tag-row">
+          <span>FEATURE 03</span>
+          <span class="feature-pill-badge">TONAL DRESSING</span>
+        </div>
+
+        <div>
+          <h3 class="feature-title">Filter by multiple color palettes simultaneously.</h3>
+          <p class="feature-desc" style="margin-top: 6px;">
+            Master tonal color-matching. Open the expandable color drawer to filter across several tones (e.g. <em>Camel + Cream + Espresso</em>) and explore pieces sorted across 32 authentic textile materials.
+          </p>
+        </div>
+
+        <!-- Interactive Color Drawer -->
+        <div class="color-tonal-box">
+          <div class="color-drawer-bar">
+            <span>MULTI-COLOR DRAWER (2 ACTIVE)</span>
+            <span style="color: #2563eb; cursor: pointer;">RESET ALL</span>
+          </div>
+
+          <div class="color-swatches-grid">
+            <div class="color-card-item selected">
+              <span class="dot" style="background: #1c1917;"></span>
+              <span>Black</span>
+            </div>
+            <div class="color-card-item selected">
+              <span class="dot" style="background: #b45309;"></span>
+              <span>Camel</span>
+            </div>
+            <div class="color-card-item">
+              <span class="dot" style="background: #fef08a;"></span>
+              <span>Cream</span>
+            </div>
+            <div class="color-card-item">
+              <span class="dot" style="background: #1e3a8a;"></span>
+              <span>Navy</span>
+            </div>
+            <div class="color-card-item">
+              <span class="dot" style="background: #3f6212;"></span>
+              <span>Olive</span>
+            </div>
+            <div class="color-card-item">
+              <span class="dot" style="background: #78716c;"></span>
+              <span>Stone</span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- ===================================================================
+           KILLER FEATURE 4: 100% PRIVATE & ICLOUD COMPATIBLE
+           =================================================================== -->
+      <article class="feature-card">
+        <div class="feature-tag-row">
+          <span>FEATURE 04</span>
+          <span class="feature-pill-badge">DATA SOVEREIGNTY</span>
+        </div>
+
+        <div>
+          <h3 class="feature-title">Your wardrobe is yours. Zero cloud algorithms.</h3>
+          <p class="feature-desc" style="margin-top: 6px;">
+            clotho stores all high-resolution cutouts and lookbooks locally inside your browser memory. Save backups to your iOS <strong>Files App / iCloud Drive</strong> in 1-tap.
+          </p>
+        </div>
+
+        <div class="privacy-badge-card">
+          <i data-lucide="shield-check" style="width: 28px; height: 28px;"></i>
+          <div>
+            <div style="font-weight: 800; color: #15803d;">100% Local-First & Zero Tracking</div>
+            <div style="color: #166534; font-size: 10px; margin-top: 2px;">
+              No ads, no remote database tracking, and full iOS iCloud Drive export compatibility.
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Bottom Launch CTA -->
+      <div class="cta-banner">
+        <h3>Ready to elevate your personal style?</h3>
+        <p>
+          No account signup, no cloud tracking. Start styling your wardrobe on your iPhone or desktop in seconds.
+        </p>
+        <a href="https://clotho-app.vercel.app" target="_blank" class="btn-main" style="padding: 16px 36px; font-size: 14px; border-radius: 999px; background: #ffffff; color: #000000; box-shadow: 0 8px 30px rgba(255,255,255,0.2);">
+          <span>Launch clotho WebApp</span>
+          <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
+        </a>
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- Minimal Footer -->
+  <footer>
+    <div>clotho — digital wardrobe & styling studio © 2026</div>
+    <div style="display: flex; gap: 16px;">
+      <a href="https://clotho-app.vercel.app" target="_blank">Launch App</a>
+      <a href="https://zinco.cc" target="_blank">zinco.cc</a>
+    </div>
+  </footer>
+
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>

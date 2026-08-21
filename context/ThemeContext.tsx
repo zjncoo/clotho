@@ -65,11 +65,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       setThemeState(savedTheme);
       document.documentElement.classList.toggle('dark', savedTheme === 'dark');
       updateThemeColor(savedTheme);
-    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      setThemeState('dark');
-      document.documentElement.classList.add('dark');
-      updateThemeColor('dark');
     } else {
+      setThemeState('light');
+      document.documentElement.classList.remove('dark');
       updateThemeColor('light');
     }
 

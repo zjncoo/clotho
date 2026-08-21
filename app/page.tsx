@@ -48,6 +48,7 @@ export default function WardrobePage() {
   const [items, setItems] = useState<ClothingItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<string>('');
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [backupSuccess, setBackupSuccess] = useState<string | null>(null);
 
   // User Profile & Personalization
@@ -117,25 +118,33 @@ export default function WardrobePage() {
     e.target.value = '';
 
     setLoading(true);
+    setUploadProgress(10);
+    setStatus('Analyzing photo...');
+
     try {
-      setStatus('AI Processing...');
-      const transparentBlob = await removeImageBackground(file, (_pct, stepMsg) => {
+      const transparentBlob = await removeImageBackground(file, (pct, stepMsg) => {
+        setUploadProgress(pct);
         setStatus(stepMsg);
       });
 
-      setStatus('Optimizing item...');
+      setStatus('Extracting colors...');
+      setUploadProgress(95);
       const { webpBase64, dominantColor } = await processAndCompressImage(transparentBlob, 0.88, 900);
 
       setPendingItem({ image: webpBase64, color: dominantColor });
       setFormColors(dominantColor !== 'N/D' ? [dominantColor] : ['Black']);
       setFormName(file.name.replace(/\.[^/.]+$/, ''));
       setFormBrand('');
+      setUploadProgress(100);
       setStatus('');
       setLoading(false);
     } catch (err) {
       console.error(err);
       setStatus('Processing failed');
-      setLoading(false);
+      setTimeout(() => {
+        setLoading(false);
+        setStatus('');
+      }, 1500);
     }
   };
 
@@ -369,15 +378,15 @@ export default function WardrobePage() {
           </p>
         </div>
 
-        {/* Action Row: Prominent Add Piece (with custom Accent Theme Color) + Settings Icon */}
-        <div className="flex items-center gap-2.5 w-full">
+        {/* Action Row: Compact Add Piece (with custom Accent Theme Color) + Settings Icon */}
+        <div className="flex items-center gap-2 pt-0.5">
           {/* Primary Add Piece Button */}
           <label
             style={{ backgroundColor: accent.hex }}
-            className="flex-1 cursor-pointer py-3.5 px-5 rounded-2xl text-white font-semibold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all hover:opacity-95"
+            className="cursor-pointer py-2.5 px-5 rounded-2xl text-white font-semibold text-xs uppercase tracking-wider inline-flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all hover:opacity-95"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <UploadCloud className="w-4 h-4" />}
-            <span className="truncate">{loading ? status : 'Add Piece'}</span>
+            <span>{loading ? status : 'Add Piece'}</span>
             <input
               ref={fileInputRef}
               type="file"
@@ -394,7 +403,7 @@ export default function WardrobePage() {
             onClick={() => setIsSettingsOpen(true)}
             aria-label="Settings"
             title="Settings & Preferences"
-            className="liquid-control p-3.5 rounded-2xl flex items-center justify-center hover:opacity-100 transition-all active:scale-95 shadow-md flex-shrink-0"
+            className="liquid-control p-2.5 rounded-2xl flex items-center justify-center hover:opacity-100 transition-all active:scale-95 shadow-md flex-shrink-0"
           >
             <SettingsIcon className="w-4 h-4" />
           </button>
@@ -487,13 +496,15 @@ export default function WardrobePage() {
             </div>
           </div>
 
-          {/* Multi-Color Dropdown Filter */}
-          <div className="relative">
+          {/* Multi-Color Dropdown Trigger */}
+          <div>
             <button
               type="button"
               onClick={() => setIsColorDropdownOpen(!isColorDropdownOpen)}
               className={`w-full liquid-control rounded-2xl px-3.5 py-2.5 flex items-center justify-between gap-2 transition-all ${
-                selectedColors.length > 0 ? 'ring-2 ring-blue-500/40' : ''
+                selectedColors.length > 0
+                  ? 'ring-2 ring-blue-500/40 bg-blue-500/10 text-blue-400 font-semibold'
+                  : ''
               }`}
             >
               <span className="text-[11px] font-mono opacity-50 whitespace-nowrap flex items-center gap-1">
@@ -521,78 +532,86 @@ export default function WardrobePage() {
                   </div>
                 )}
                 <ChevronDown
-                  className={`w-3.5 h-3.5 opacity-40 transition-transform ${
+                  className={`w-3.5 h-3.5 opacity-40 transition-transform duration-200 ${
                     isColorDropdownOpen ? 'rotate-180' : ''
                   }`}
                 />
               </div>
             </button>
-
-            {/* Dropdown Menu Popover */}
-            <AnimatePresence>
-              {isColorDropdownOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: 8, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 8, scale: 0.98 }}
-                  transition={{ duration: 0.2 }}
-                  className="absolute z-30 right-0 sm:left-0 top-full mt-2 w-72 sm:w-80 liquid-glass rounded-2xl p-3 shadow-2xl border border-white/20 dark:border-white/10 space-y-2.5 max-h-72 overflow-y-auto overscroll-contain"
-                >
-                  <div className="flex items-center justify-between pb-1.5 border-b border-black/5 dark:border-white/5">
-                    <span className="text-[11px] font-mono opacity-60">
-                      Select Colors ({selectedColors.length})
-                    </span>
-                    {selectedColors.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedColors([])}
-                        className="text-[10px] font-mono text-blue-400 hover:underline"
-                      >
-                        Clear All
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {COLOR_PALETTE.map((c) => {
-                      const isSelected = selectedColors.includes(c.name);
-                      return (
-                        <button
-                          key={c.name}
-                          type="button"
-                          onClick={() => toggleFilterColor(c.name)}
-                          className={`p-2 rounded-xl text-[11px] font-medium flex items-center gap-2 transition-all text-left ${
-                            isSelected
-                              ? 'bg-blue-500/15 text-blue-400 ring-1 ring-blue-500/50 font-semibold'
-                              : 'liquid-control opacity-75 hover:opacity-100'
-                          }`}
-                        >
-                          <span
-                            className="w-3.5 h-3.5 rounded-md border border-white/20 shadow-xs flex-shrink-0"
-                            style={{ backgroundColor: c.hex }}
-                          />
-                          <span className="truncate flex-1">{c.name}</span>
-                          {isSelected && <Check className="w-3 h-3 flex-shrink-0" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <div className="pt-1 border-t border-black/5 dark:border-white/5 flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() => setIsColorDropdownOpen(false)}
-                      style={{ backgroundColor: accent.hex }}
-                      className="px-4 py-1.5 rounded-xl text-white font-semibold text-[11px] shadow-sm active:scale-95 transition-all"
-                    >
-                      Done
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
         </div>
+
+        {/* Inline Expandable Multi-Color Selector Drawer */}
+        <AnimatePresence>
+          {isColorDropdownOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+              className="overflow-hidden"
+            >
+              <div className="liquid-control rounded-2xl p-3.5 space-y-3 mt-1 border border-black/5 dark:border-white/5">
+                <div className="flex items-center justify-between pb-1 border-b border-black/5 dark:border-white/5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold">Select Wardrobe Colors</span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-black/10 dark:bg-white/10 opacity-70">
+                      {selectedColors.length} selected
+                    </span>
+                  </div>
+                  {selectedColors.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedColors([])}
+                      className="text-[11px] font-mono text-blue-400 hover:underline"
+                    >
+                      Clear All
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5 max-h-56 overflow-y-auto overscroll-contain pr-1">
+                  {COLOR_PALETTE.map((c) => {
+                    const isSelected = selectedColors.includes(c.name);
+                    return (
+                      <button
+                        key={c.name}
+                        type="button"
+                        onClick={() => toggleFilterColor(c.name)}
+                        className={`p-2 rounded-xl text-[11px] font-medium flex items-center gap-2 transition-all text-left ${
+                          isSelected
+                            ? 'bg-blue-500/15 text-blue-400 ring-1.5 ring-blue-500/50 font-semibold shadow-xs'
+                            : 'liquid-control opacity-70 hover:opacity-100'
+                        }`}
+                      >
+                        <span
+                          className="w-3.5 h-3.5 rounded-md border border-white/20 shadow-xs flex-shrink-0"
+                          style={{ backgroundColor: c.hex }}
+                        />
+                        <span className="truncate flex-1">{c.name}</span>
+                        {isSelected && <Check className="w-3 h-3 flex-shrink-0 text-blue-400" />}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="pt-2 border-t border-black/5 dark:border-white/5 flex items-center justify-between">
+                  <span className="text-[10px] font-mono opacity-50">
+                    Tap colors to filter your pieces
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsColorDropdownOpen(false)}
+                    style={{ backgroundColor: accent.hex }}
+                    className="px-4 py-1.5 rounded-xl text-white font-semibold text-xs shadow-sm active:scale-95 transition-all"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Selected Color Badges Quick Row */}
         {selectedColors.length > 0 && (
@@ -872,6 +891,42 @@ export default function WardrobePage() {
                   Save Changes
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* AI Background Removal Processing Modal */}
+      <AnimatePresence>
+        {loading && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-lg z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 10 }}
+              className="liquid-glass rounded-[2rem] max-w-xs w-full p-6 text-center space-y-4 shadow-2xl border border-white/20 dark:border-white/10 flex flex-col items-center"
+            >
+              <div className="relative flex items-center justify-center">
+                <div
+                  className="w-14 h-14 rounded-full border-4 border-black/10 dark:border-white/10 border-t-blue-500 animate-spin"
+                />
+                <Sparkles className="w-5 h-5 text-blue-500 absolute animate-pulse" />
+              </div>
+
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold tracking-tight">Auto-Cut Studio</h3>
+                <p className="text-xs font-mono opacity-70">{status || 'Processing garment...'}</p>
+              </div>
+
+              {/* Real-time percentage bar */}
+              <div className="w-full bg-black/10 dark:bg-white/10 rounded-full h-1.5 overflow-hidden">
+                <div
+                  className="h-full bg-blue-500 rounded-full transition-all duration-300 ease-out"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+
+              <span className="text-[10px] font-mono opacity-50">{uploadProgress}%</span>
             </motion.div>
           </div>
         )}
