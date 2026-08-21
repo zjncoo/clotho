@@ -18,6 +18,7 @@ import {
   Tag,
   Palette,
   Settings as SettingsIcon,
+  Wand2,
 } from 'lucide-react';
 import { ClothingItem, Category } from '@/types';
 import { processAndCompressImage } from '@/utils/imageProcessor';
@@ -28,6 +29,7 @@ import { useTheme } from '@/context/ThemeContext';
 import SettingsModal from '@/components/SettingsModal';
 import OnboardingModal from '@/components/OnboardingModal';
 import PWAInstallGuide from '@/components/PWAInstallGuide';
+import CutoutRefiner from '@/components/CutoutRefiner';
 import { exportWardrobeToFiles, importWardrobeFromFiles } from '@/utils/cloudStorage';
 
 const STORAGE_KEY = 'closet_catalog_items';
@@ -67,6 +69,7 @@ export default function WardrobePage() {
 
   // New Item Upload Form Modal State
   const [pendingItem, setPendingItem] = useState<{ image: string; color: string } | null>(null);
+  const [isRefiningCutout, setIsRefiningCutout] = useState(false);
   const [formName, setFormName] = useState('');
   const [formBrand, setFormBrand] = useState('');
   const [formCategory, setFormCategory] = useState<Category>('top');
@@ -955,14 +958,40 @@ export default function WardrobePage() {
                 </button>
               </div>
 
-              {/* Preview */}
-              <div className="aspect-square max-h-52 liquid-control rounded-2xl flex items-center justify-center p-3 overflow-hidden bg-black/5 dark:bg-white/[0.03]">
-                <img
-                  src={pendingItem.image}
-                  alt="Preview"
-                  className="w-full h-full object-contain filter drop-shadow-lg"
-                />
+              {/* Preview with Magic Wand Refine Option */}
+              <div className="space-y-2">
+                <div className="aspect-square max-h-52 liquid-control rounded-2xl flex items-center justify-center p-3 overflow-hidden bg-[repeating-conic-gradient(#e5e7eb_0%_25%,#ffffff_0%_50%)] bg-[length:16px_16px] dark:bg-[repeating-conic-gradient(#1f2937_0%_25%,#111827_0%_50%)]">
+                  <img
+                    src={pendingItem.image}
+                    alt="Preview"
+                    className="w-full h-full object-contain filter drop-shadow-lg"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsRefiningCutout(true)}
+                  className="w-full py-2 px-3 rounded-xl border border-black/10 dark:border-white/15 text-xs font-mono font-semibold flex items-center justify-center gap-1.5 hover:bg-black/5 dark:hover:bg-white/5 active:scale-[0.98] transition-all bg-white/40 dark:bg-black/40"
+                >
+                  <Wand2 className="w-3.5 h-3.5 text-blue-500" />
+                  <span>Magic Wand / Refine Cutout</span>
+                </button>
               </div>
+
+              {/* Interactive Cutout Refiner Modal */}
+              <AnimatePresence>
+                {isRefiningCutout && (
+                  <CutoutRefiner
+                    initialImage={pendingItem.image}
+                    accentColor={accent.hex}
+                    onApply={(refinedBase64) => {
+                      setPendingItem((prev) => (prev ? { ...prev, image: refinedBase64 } : null));
+                      setIsRefiningCutout(false);
+                    }}
+                    onClose={() => setIsRefiningCutout(false)}
+                  />
+                )}
+              </AnimatePresence>
 
               <div className="space-y-3.5 text-xs font-mono">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

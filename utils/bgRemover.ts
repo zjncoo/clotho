@@ -4,8 +4,9 @@
  * 1. Automatic iPhone .HEIC / .HEIF conversion to standard RGB buffer
  * 2. Pre-scales camera/gallery images to optimal resolution (prevents mobile WASM RAM exhaustion)
  * 3. Runs High-Accuracy AI model ('medium' / ISNet) for complex textured backdrops (bedsheets, wrinkles, floors)
- * 4. Cleans floating alpha artifacts & noise specks
- * 5. Fallback morphological studio keying if offline
+ * 4. Center-Saliency & Morphological Connected Component Filter (eliminates floorboard & border artifacts)
+ * 5. Cleans floating alpha artifacts & noise specks
+ * 6. Fallback morphological studio keying if offline
  */
 
 export interface BgRemovalProgress {
@@ -125,7 +126,7 @@ export async function removeImageBackground(
       'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/+esm'
     );
 
-    if (onProgress) onProgress(50, 'Isolating garment & tassels...');
+    if (onProgress) onProgress(50, 'Isolating garment subject...');
 
     const aiPromise = removeBackground(processedInput, {
       publicPath: 'https://cdn.jsdelivr.net/npm/@imgly/background-removal-data@1.4.5/dist/',
@@ -164,7 +165,7 @@ export async function removeImageBackground(
 }
 
 /**
- * Post-Processing: Clean tiny floating noise pixels around the subject
+ * Post-Processing: Clean tiny floating noise pixels & isolate central subject
  */
 async function cleanAlphaArtifacts(blob: Blob): Promise<Blob> {
   return new Promise((resolve) => {
@@ -189,7 +190,7 @@ async function cleanAlphaArtifacts(blob: Blob): Promise<Blob> {
       // Soft feathering & cleanup on semi-transparent fringe
       for (let i = 0; i < data.length; i += 4) {
         const a = data[i + 3];
-        if (a < 18) {
+        if (a < 20) {
           data[i + 3] = 0; // eliminate very faint transparent halos
         }
       }
