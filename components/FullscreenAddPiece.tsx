@@ -22,6 +22,7 @@ import { generateHarmonicSuite } from '@/utils/colorMath';
 import { removeImageBackground } from '@/utils/bgRemover';
 import { processAndCompressImage } from '@/utils/imageProcessor';
 import { COLOR_PALETTE } from '@/utils/colorPalette';
+import { MATERIALS } from '@/utils/materialConstants';
 import CutoutRefiner from '@/components/CutoutRefiner';
 
 const CATEGORIES: { id: Category; label: string; icon: string }[] = [
@@ -51,20 +52,8 @@ const POPULAR_BRANDS = [
   'Carhartt WIP',
 ];
 
-const POPULAR_MATERIALS = [
-  '100% Cashmere',
-  'Raw Selvedge Denim',
-  'Heavyweight Cotton',
-  'Suede Leather',
-  'Mulberry Silk',
-  'Pure Linen',
-  'Merino Wool',
-  'Brushed Mohair',
-  'Corduroy',
-  'Lambskin Leather',
-  'Technical Ripstop',
-  'Alpaca Blend',
-];
+// Use the same material list as the edit modal
+const POPULAR_MATERIALS = MATERIALS.filter((m) => m !== 'Other');
 
 interface FullscreenAddPieceProps {
   isOpen: boolean;
@@ -199,10 +188,11 @@ export default function FullscreenAddPiece({
       }}
       className="fixed inset-0 z-50 flex flex-col justify-between overflow-hidden select-none"
     >
-      {/* --------------------------------------------------------------------------
-          Top Navigation Bar (Progress + Close)
-          -------------------------------------------------------------------------- */}
-      <div className="w-full px-5 pt-4 pb-3 flex items-center justify-between z-20 border-b border-black/[0.06] dark:border-white/[0.06]">
+      {/* Top Navigation Bar — padded below Dynamic Island / notch */}
+      <div
+        className="w-full px-5 pb-3 flex items-center justify-between z-20 border-b border-black/[0.06] dark:border-white/[0.06]"
+        style={{ paddingTop: 'max(env(safe-area-inset-top) + 12px, 20px)' }}
+      >
         {/* Step Indicator */}
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1">
@@ -237,10 +227,8 @@ export default function FullscreenAddPiece({
         </button>
       </div>
 
-      {/* --------------------------------------------------------------------------
-          Main Step Content (100% Fluid & Responsive)
-          -------------------------------------------------------------------------- */}
-      <div className="flex-1 w-full max-w-xl mx-auto px-5 py-4 flex flex-col justify-center overflow-y-auto overscroll-contain relative z-10">
+      {/* Main Step Content — scrollable, gives max room to grid selectors */}
+      <div className="flex-1 w-full max-w-xl mx-auto px-5 py-4 flex flex-col overflow-y-auto overscroll-contain relative z-10">
         <AnimatePresence mode="wait">
           {/* ===================================================================
               STEP 1: CAPTURE & AI AUTO-CUT
@@ -418,14 +406,14 @@ export default function FullscreenAddPiece({
               className="space-y-5"
             >
               <div className="text-center space-y-1">
-                <div className="font-mono text-[11px] uppercase tracking-widest font-bold opacity-60 flex items-center justify-center gap-1">
-                  <Palette className="w-3.5 h-3.5" />
+                <div className="font-mono text-[10px] uppercase tracking-widest font-bold opacity-60 flex items-center justify-center gap-1">
+                  <Palette className="w-3 h-3" />
                   <span>COLOR HARMONIES</span>
                 </div>
-                <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
+                <h2 className="text-xl font-black tracking-tight">
                   Tonal Color Palette
                 </h2>
-                <p className="text-xs font-mono opacity-65">
+                <p className="text-[11px] font-mono opacity-65">
                   Select dominant and accent shades for smart outfit layering.
                 </p>
               </div>
@@ -449,8 +437,8 @@ export default function FullscreenAddPiece({
                 ))}
               </div>
 
-              {/* Color Swatch Grid */}
-              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-56 overflow-y-auto overscroll-contain p-1">
+              {/* Color Swatch Grid — no height cap, fills available space */}
+              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 p-1">
                 {COLOR_PALETTE.map((col) => {
                   const isSelected = selectedColors.includes(col.name);
                   return (
@@ -465,7 +453,7 @@ export default function FullscreenAddPiece({
                       }`}
                     >
                       <span
-                        className="w-5 h-5 rounded-full border border-black/20 shadow-xs"
+                        className="w-6 h-6 rounded-full border border-black/20 shadow-xs"
                         style={{ backgroundColor: col.hex }}
                       />
                       <span className="text-[10px] font-mono truncate w-full text-center">
@@ -614,10 +602,11 @@ export default function FullscreenAddPiece({
         </AnimatePresence>
       </div>
 
-      {/* --------------------------------------------------------------------------
-          Bottom Controls (Next / Back / Save)
-          -------------------------------------------------------------------------- */}
-      <div className="w-full px-5 py-4 flex items-center justify-between border-t border-black/[0.06] dark:border-white/[0.06] z-20">
+      {/* Bottom Controls — padded above home indicator */}
+      <div
+        className="w-full px-5 pt-4 flex items-center justify-between border-t border-black/[0.06] dark:border-white/[0.06] z-20"
+        style={{ paddingBottom: 'max(env(safe-area-inset-bottom) + 8px, 16px)' }}
+      >
         {step > 1 ? (
           <button
             type="button"

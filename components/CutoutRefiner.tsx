@@ -1,15 +1,12 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Wand2,
   RotateCcw,
   Check,
   X,
-  Sliders,
-  Sparkles,
-  Eraser,
   Undo,
 } from 'lucide-react';
 
@@ -32,8 +29,9 @@ export default function CutoutRefiner({
   const [history, setHistory] = useState<ImageData[]>([]);
   const [tolerance, setTolerance] = useState(30);
   const [mode, setMode] = useState<'magic-erase' | 'magic-restore'>('magic-erase');
-  const [isProcessing, setIsProcessing] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const isDragging = useRef(false);
+  const dragSnapshotRef = useRef<ImageData | null>(null);
 
   // Initialize canvas with initial image
   useEffect(() => {
@@ -55,80 +53,94 @@ export default function CutoutRefiner({
     };
   }, [initialImage]);
 
-  // Handle tap/click on canvas for Magic Wand Erase/Restore
-  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    if (!ctx) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-
-    const clickX = Math.floor((clientX - rect.left) * scaleX);
-    const clickY = Math.floor((clientY - rect.top) * scaleY);
-
-    if (clickX < 0 || clickX >= canvas.width || clickY < 0 || clickY >= canvas.height) return;
-
-    setIsProcessing(true);
-
-    // Save current state for Undo
-    const currentData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  // Helper: flood-fill erase/restore from a point (without saving to history)
+  const floodFillAt = (
+    ctx: CanvasRenderingContext2D,
+    w: number,
+    h: number,
+    px: number,
+    py: number,
+    tol: number
+  ) => {
+    const imgData = ctx.getImageData(0, 0, w, h);
     const { data } = imgData;
-    const w = canvas.width;
-    const h = canvas.height;
-
-    const targetIdx = (clickY * w + clickX) * 4;
+    const targetIdx = (py * w + px) * 4;
     const targetR = data[targetIdx];
     const targetG = data[targetIdx + 1];
     const targetB = data[targetIdx + 2];
-    const targetA = data[targetIdx + 3];
 
-    // Flood fill / color keying from clicked coordinate
     const visited = new Uint8Array(w * h);
-    const queue: [number, number][] = [[clickX, clickY]];
-    const tol = tolerance;
+    const queue: [number, number][] = [[px, py]];
 
     while (queue.length > 0) {
       const [x, y] = queue.pop()!;
       const idx = (y * w + x) * 4;
       const pixelPos = y * w + x;
-
       if (visited[pixelPos]) continue;
       visited[pixelPos] = 1;
 
-      const r = data[idx];
-      const g = data[idx + 1];
-      const b = data[idx + 2];
-      const a = data[idx + 3];
-
-      // Euclidean color distance
-      const dist = Math.hypot(r - targetR, g - targetG, b - targetB);
-
+      const dist = Math.hypot(data[idx] - targetR, data[idx + 1] - targetG, data[idx + 2] - targetB);
       if (dist <= tol) {
-        if (mode === 'magic-erase') {
-          data[idx + 3] = 0; // Erase pixel
-        } else {
-          data[idx + 3] = 255; // Restore pixel
-        }
-
-        // Check 4 neighbors
+        data[idx + 3] = mode === 'magic-erase' ? 0 : 255;
         if (x > 0 && !visited[pixelPos - 1]) queue.push([x - 1, y]);
         if (x < w - 1 && !visited[pixelPos + 1]) queue.push([x + 1, y]);
         if (y > 0 && !visited[pixelPos - w]) queue.push([x, y - 1]);
         if (y < h - 1 && !visited[pixelPos + w]) queue.push([x, y + 1]);
       }
     }
-
     ctx.putImageData(imgData, 0, 0);
-    setHistory((prev) => [...prev, currentData]);
+  };
+
+  // Get canvas pixel position from pointer/touch client coords
+  const getCanvasPos = (canvas: HTMLCanvasElement, clientX: number, clientY: number) => {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: Math.floor(((clientX - rect.left) / rect.width) * canvas.width),
+      y: Math.floor(((clientY - rect.top) / rect.height) * canvas.height),
+    };
+  };
+
+  // ── POINTER DOWN: start drag, save snapshot ──
+  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return;
+
+    canvas.setPointerCapture(e.pointerId);
+    isDragging.current = true;
+    // Save snapshot before drag starts (for undo)
+    dragSnapshotRef.current = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+    const { x, y } = getCanvasPos(canvas, e.clientX, e.clientY);
+    if (x < 0 || x >= canvas.width || y < 0 || y >= canvas.height) return;
+    floodFillAt(ctx, canvas.width, canvas.height, x, y, tolerance);
     setHasChanges(true);
-    setIsProcessing(false);
+  };
+
+  // ── POINTER MOVE: continuous erase while dragging ──
+  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!isDragging.current) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return;
+
+    const { x, y } = getCanvasPos(canvas, e.clientX, e.clientY);
+    if (x < 0 || x >= canvas.width || y < 0 || y >= canvas.height) return;
+    floodFillAt(ctx, canvas.width, canvas.height, x, y, tolerance);
+  };
+
+  // ── POINTER UP: end drag, save to history ──
+  const handlePointerUp = () => {
+    if (!isDragging.current) return;
+    isDragging.current = false;
+
+    const canvas = canvasRef.current;
+    if (!canvas || !dragSnapshotRef.current) return;
+
+    setHistory((prev) => [...prev, dragSnapshotRef.current!]);
+    dragSnapshotRef.current = null;
   };
 
   // Undo last refinement step
@@ -191,15 +203,19 @@ export default function CutoutRefiner({
 
         {/* Tip */}
         <p className="text-[11px] font-mono text-center opacity-60">
-          Tap any leftover background spot (e.g. inside handles or floors) to erase it.
+          Tap or drag your finger to erase background areas. Drag for fast erasing.
         </p>
 
         {/* Canvas Display with Checkerboard Transparency Background */}
         <div className="flex-1 min-h-[220px] max-h-[360px] rounded-2xl overflow-hidden border border-black/10 dark:border-white/10 flex items-center justify-center relative bg-[repeating-conic-gradient(#e5e7eb_0%_25%,#ffffff_0%_50%)] bg-[length:16px_16px] dark:bg-[repeating-conic-gradient(#1f2937_0%_25%,#111827_0%_50%)]">
           <canvas
             ref={canvasRef}
-            onClick={handleCanvasClick}
-            className="max-w-full max-h-full object-contain cursor-crosshair active:scale-[0.99] transition-transform"
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerLeave={handlePointerUp}
+            className="max-w-full max-h-full object-contain cursor-crosshair touch-none"
+            style={{ touchAction: 'none' }}
           />
         </div>
 

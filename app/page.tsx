@@ -723,12 +723,12 @@ export default function WardrobePage() {
                 onClick={() => openEditModal(item)}
                 className="liquid-glass rounded-3xl p-3 sm:p-4 flex flex-col justify-between group cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-white/30 dark:hover:border-white/20 active:scale-[0.98]"
               >
-                {/* Image Container: Full Viewport, Auto-Trimmed */}
-                <div className="aspect-square relative rounded-2xl liquid-control flex items-center justify-center p-2 overflow-hidden bg-black/5 dark:bg-white/[0.03]">
+                {/* Image Container: No padding, image fills the square */}
+                <div className="aspect-square relative rounded-2xl overflow-hidden bg-black/5 dark:bg-white/[0.04]">
                   <img
                     src={item.image}
                     alt={item.name}
-                    className="w-full h-full object-contain filter drop-shadow-md transition-transform duration-300 group-hover:scale-105"
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                     loading="lazy"
                   />
 
