@@ -12,6 +12,7 @@ export interface ClothingItem {
   id: string;
   image: string; // Base64 WebP
   category: Category;
+  brand?: string; // Brand / Label
   color?: string; // Legacy single color string
   colors?: string[]; // Multi-color support
   material: string;

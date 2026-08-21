@@ -11,7 +11,7 @@ import {
   X,
   Check,
   Plus,
-  Filter,
+  Tag,
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import Link from 'next/link';
@@ -61,6 +61,7 @@ export default function OutfitStudioPage() {
   const [isExporting, setIsExporting] = useState(false);
 
   // Drawer filtering state
+  const [drawerBrand, setDrawerBrand] = useState('All');
   const [drawerMaterial, setDrawerMaterial] = useState('All');
   const [drawerColor, setDrawerColor] = useState('All');
 
@@ -88,21 +89,30 @@ export default function OutfitStudioPage() {
 
   const activeSlotConfig = SLOTS.find((s) => s.category === activeDrawerCategory);
 
-  // Filtered items in drawer by category + material + color swatches
+  // Available brands for the currently opened category
+  const availableDrawerBrands = useMemo(() => {
+    if (!activeDrawerCategory) return ['All'];
+    const catItems = items.filter((i) => i.category === activeDrawerCategory);
+    const brandsSet = new Set(catItems.map((i) => i.brand?.trim()).filter(Boolean) as string[]);
+    return ['All', ...Array.from(brandsSet).sort()];
+  }, [items, activeDrawerCategory]);
+
+  // Filtered items in drawer by category + brand + material + color swatches
   const filteredCategoryItems = useMemo(() => {
     if (!activeDrawerCategory) return [];
 
     return items
       .filter((i) => i.category === activeDrawerCategory)
       .filter((i) => {
+        const matchBrand = drawerBrand === 'All' || (i.brand && i.brand.toLowerCase() === drawerBrand.toLowerCase());
         const matchMat = drawerMaterial === 'All' || i.material === drawerMaterial;
         const itemColors = i.colors && i.colors.length > 0 ? i.colors : i.color ? [i.color] : [];
         const matchCol =
           drawerColor === 'All' ||
           itemColors.some((c) => c.toLowerCase() === drawerColor.toLowerCase() || c.includes(drawerColor));
-        return matchMat && matchCol;
+        return matchBrand && matchMat && matchCol;
       });
-  }, [items, activeDrawerCategory, drawerMaterial, drawerColor]);
+  }, [items, activeDrawerCategory, drawerBrand, drawerMaterial, drawerColor]);
 
   const currentSlotSelectedItems = (activeDrawerCategory && outfit[activeDrawerCategory]) || [];
 
@@ -135,6 +145,7 @@ export default function OutfitStudioPage() {
   };
 
   const openDrawer = (cat: Category) => {
+    setDrawerBrand('All');
     setDrawerMaterial('All');
     setDrawerColor('All');
     setActiveDrawerCategory(cat);
@@ -169,17 +180,17 @@ export default function OutfitStudioPage() {
   );
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-6 pb-28 sm:pb-32 space-y-6">
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-4 pb-28 sm:pb-32 space-y-4 sm:space-y-6">
       {/* Action Header */}
-      <div className="flex justify-between items-center border-b border-black/5 dark:border-white/5 pb-4">
+      <div className="flex justify-between items-center border-b border-black/5 dark:border-white/5 pb-3">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Studio</h1>
           <p className="text-xs font-mono opacity-50 mt-0.5">
-            Tap any section on the mannequin to layer pieces ({totalItemsCount} total selected)
+            Tap slots to assemble outfit ({totalItemsCount} selected)
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setOutfit({})}
             disabled={totalItemsCount === 0}
@@ -203,13 +214,13 @@ export default function OutfitStudioPage() {
       <div className="flex flex-col items-center">
         <div
           ref={mannequinRef}
-          className="w-full max-w-md liquid-glass rounded-[2.5rem] p-5 sm:p-6 shadow-2xl border border-white/20 dark:border-white/10 relative overflow-hidden"
+          className="w-full max-w-sm sm:max-w-md liquid-glass rounded-[2.5rem] p-4 sm:p-5 shadow-2xl border border-white/20 dark:border-white/10 relative overflow-hidden"
         >
           {/* Subtle Ambient Vignette */}
           <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] via-transparent to-white/[0.02] pointer-events-none" />
 
           {/* Mannequin Section Layout */}
-          <div className="flex flex-col items-center gap-3 relative z-10">
+          <div className="flex flex-col items-center gap-2.5 relative z-10">
             {/* 1. Headwear */}
             <MannequinSlotButton
               slotKey="headwear"
@@ -217,7 +228,7 @@ export default function OutfitStudioPage() {
               icon="🧢"
               items={outfit.headwear}
               onClick={() => openDrawer('headwear')}
-              className="w-36 h-20"
+              className="w-32 sm:w-36 h-16 sm:h-20"
             />
 
             {/* 2. Necklace */}
@@ -227,11 +238,11 @@ export default function OutfitStudioPage() {
               icon="📿"
               items={outfit.necklace}
               onClick={() => openDrawer('necklace')}
-              className="w-32 h-14 -mt-1 z-20"
+              className="w-28 sm:w-32 h-11 sm:h-13 -mt-1.5 z-20"
             />
 
             {/* Middle Row: Bag + Tops + Bracelet */}
-            <div className="w-full flex items-center justify-between gap-2.5">
+            <div className="w-full flex items-center justify-between gap-2">
               {/* Bag Slot */}
               <MannequinSlotButton
                 slotKey="bag"
@@ -239,7 +250,7 @@ export default function OutfitStudioPage() {
                 icon="👜"
                 items={outfit.bag}
                 onClick={() => openDrawer('bag')}
-                className="w-20 h-28"
+                className="w-16 sm:w-20 h-28 sm:h-32"
               />
 
               {/* Tops / Outerwear Slot */}
@@ -249,7 +260,7 @@ export default function OutfitStudioPage() {
                 icon="👕"
                 items={outfit.top}
                 onClick={() => openDrawer('top')}
-                className="flex-1 h-44"
+                className="flex-1 h-36 sm:h-42"
               />
 
               {/* Bracelet Slot */}
@@ -259,7 +270,7 @@ export default function OutfitStudioPage() {
                 icon="⌚"
                 items={outfit.bracelet}
                 onClick={() => openDrawer('bracelet')}
-                className="w-20 h-28"
+                className="w-16 sm:w-20 h-28 sm:h-32"
               />
             </div>
 
@@ -270,11 +281,11 @@ export default function OutfitStudioPage() {
               icon="👖"
               items={outfit.bottom}
               onClick={() => openDrawer('bottom')}
-              className="w-4/5 h-44"
+              className="w-4/5 h-36 sm:h-42"
             />
 
             {/* Bottom Row: Shoes + Extras */}
-            <div className="w-full flex items-center justify-center gap-3">
+            <div className="w-full flex items-center justify-center gap-2.5">
               {/* Shoes */}
               <MannequinSlotButton
                 slotKey="shoes"
@@ -282,7 +293,7 @@ export default function OutfitStudioPage() {
                 icon="👟"
                 items={outfit.shoes}
                 onClick={() => openDrawer('shoes')}
-                className="w-44 h-24"
+                className="w-36 sm:w-44 h-20 sm:h-22"
               />
 
               {/* Extras */}
@@ -292,14 +303,14 @@ export default function OutfitStudioPage() {
                 icon="🕶️"
                 items={outfit.accessories}
                 onClick={() => openDrawer('accessories')}
-                className="w-28 h-24"
+                className="w-24 sm:w-28 h-20 sm:h-22"
               />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Drawer / Bottom Sheet Modal with Filter by Color & Material */}
+      {/* Drawer / Bottom Sheet Modal with Filter by Brand, Color & Material */}
       <AnimatePresence>
         {activeDrawerCategory && activeSlotConfig && (
           <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-md overflow-hidden touch-none">
@@ -329,33 +340,43 @@ export default function OutfitStudioPage() {
                 </button>
               </div>
 
-              {/* Drawer Filter Controls: Material & Color Swatches */}
+              {/* Drawer Filter Controls */}
               <div className="py-3 space-y-2.5 border-b border-black/5 dark:border-white/5 text-xs font-mono">
-                {/* Material Select */}
-                <div className="flex items-center gap-2">
-                  <span className="opacity-50">Material:</span>
-                  <select
-                    value={drawerMaterial}
-                    onChange={(e) => setDrawerMaterial(e.target.value)}
-                    className="liquid-control rounded-xl px-2.5 py-1 text-xs focus:outline-none flex-1 max-w-[200px] cursor-pointer"
-                  >
-                    {MATERIALS.map((m) => (
-                      <option key={m} value={m} className="text-black bg-white dark:bg-neutral-900 dark:text-white">
-                        {m}
-                      </option>
-                    ))}
-                  </select>
-                  {(drawerMaterial !== 'All' || drawerColor !== 'All') && (
-                    <button
-                      onClick={() => {
-                        setDrawerMaterial('All');
-                        setDrawerColor('All');
-                      }}
-                      className="text-[10px] text-blue-400 hover:underline ml-auto"
+                {/* Brand & Material Selectors */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex items-center gap-1.5 liquid-control rounded-xl px-2.5 py-1">
+                    <Tag className="w-3 h-3 opacity-40 flex-shrink-0" />
+                    <select
+                      value={drawerBrand}
+                      onChange={(e) => setDrawerBrand(e.target.value)}
+                      className="bg-transparent text-xs font-medium w-full focus:outline-none cursor-pointer"
                     >
-                      Reset filters
-                    </button>
-                  )}
+                      <option value="All" className="text-black bg-white dark:bg-neutral-900 dark:text-white">
+                        All Brands
+                      </option>
+                      {availableDrawerBrands
+                        .filter((b) => b !== 'All')
+                        .map((brand) => (
+                          <option key={brand} value={brand} className="text-black bg-white dark:bg-neutral-900 dark:text-white">
+                            {brand}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+
+                  <div className="liquid-control rounded-xl px-2.5 py-1">
+                    <select
+                      value={drawerMaterial}
+                      onChange={(e) => setDrawerMaterial(e.target.value)}
+                      className="bg-transparent text-xs font-medium w-full focus:outline-none cursor-pointer"
+                    >
+                      {MATERIALS.map((m) => (
+                        <option key={m} value={m} className="text-black bg-white dark:bg-neutral-900 dark:text-white">
+                          {m}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 {/* Color Swatches */}
@@ -391,10 +412,25 @@ export default function OutfitStudioPage() {
                     );
                   })}
                 </div>
+
+                {(drawerBrand !== 'All' || drawerMaterial !== 'All' || drawerColor !== 'All') && (
+                  <div className="flex justify-end pt-0.5">
+                    <button
+                      onClick={() => {
+                        setDrawerBrand('All');
+                        setDrawerMaterial('All');
+                        setDrawerColor('All');
+                      }}
+                      className="text-[10px] text-blue-400 hover:underline"
+                    >
+                      Reset drawer filters
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Drawer Content */}
-              <div className="flex-1 overflow-y-auto py-4 pr-1">
+              <div className="flex-1 overflow-y-auto py-4 pr-1 overscroll-contain">
                 {filteredCategoryItems.length === 0 ? (
                   <div className="p-8 text-center border border-dashed border-black/10 dark:border-white/10 rounded-2xl space-y-2">
                     <p className="text-xs font-mono opacity-50">
@@ -435,6 +471,11 @@ export default function OutfitStudioPage() {
                             />
                           </div>
                           <div className="w-full text-center px-1 pt-1">
+                            {item.brand && (
+                              <p className="text-[9px] font-mono uppercase tracking-wider text-blue-400 font-semibold truncate">
+                                {item.brand}
+                              </p>
+                            )}
                             <p className="text-[11px] font-medium truncate">{item.name}</p>
                             <div className="flex items-center justify-center gap-1 pt-0.5">
                               {itemColors.map((colName) => (

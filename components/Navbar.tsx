@@ -10,33 +10,33 @@ export default function Navbar() {
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <div className="fixed bottom-6 inset-x-0 z-50 flex justify-center px-4 pointer-events-none">
-      <nav className="liquid-glass pointer-events-auto rounded-full px-4 py-2.5 flex items-center gap-3 shadow-2xl border border-white/20 dark:border-white/10">
+    <div className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] inset-x-0 z-40 flex justify-center px-4 pointer-events-none">
+      <nav className="liquid-glass pointer-events-auto rounded-full px-3.5 py-2 flex items-center gap-2 sm:gap-3 shadow-2xl border border-white/20 dark:border-white/10">
         <Link
           href="/"
-          className={`px-4 py-2 text-xs font-medium rounded-full transition-all flex items-center gap-2 ${
+          className={`px-3.5 py-2 text-xs font-semibold rounded-full transition-all flex items-center gap-1.5 ${
             pathname === '/'
               ? 'bg-black text-white dark:bg-white dark:text-black shadow-md'
               : 'opacity-70 hover:opacity-100'
           }`}
         >
-          <Shirt className="w-4 h-4" />
+          <Shirt className="w-3.5 h-3.5" />
           <span>Wardrobe</span>
         </Link>
 
         <Link
           href="/create"
-          className={`px-4 py-2 text-xs font-medium rounded-full transition-all flex items-center gap-2 ${
+          className={`px-3.5 py-2 text-xs font-semibold rounded-full transition-all flex items-center gap-1.5 ${
             pathname === '/create'
               ? 'bg-black text-white dark:bg-white dark:text-black shadow-md'
               : 'opacity-70 hover:opacity-100'
           }`}
         >
-          <Sparkles className="w-4 h-4" />
+          <Sparkles className="w-3.5 h-3.5" />
           <span>Studio</span>
         </Link>
 
-        <div className="w-[1px] h-5 bg-black/10 dark:bg-white/10 mx-1" />
+        <div className="w-[1px] h-4 bg-black/10 dark:bg-white/10 mx-0.5" />
 
         <button
           onClick={toggleTheme}

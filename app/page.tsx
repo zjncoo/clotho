@@ -12,15 +12,19 @@ import {
   Sparkles,
   ChevronDown,
   RotateCcw,
-  Download,
-  Upload,
   CheckCircle2,
   Edit3,
   Check,
+  Tag,
+  Settings as SettingsIcon,
 } from 'lucide-react';
 import { ClothingItem, Category } from '@/types';
 import { processAndCompressImage } from '@/utils/imageProcessor';
+import { removeImageBackground } from '@/utils/bgRemover';
 import { COLOR_PALETTE, getColorHex } from '@/utils/colorPalette';
+import SettingsModal from '@/components/SettingsModal';
+import OnboardingModal from '@/components/OnboardingModal';
+import PWAInstallGuide from '@/components/PWAInstallGuide';
 
 const STORAGE_KEY = 'closet_catalog_items';
 
@@ -58,15 +62,23 @@ export default function WardrobePage() {
   const [status, setStatus] = useState<string>('');
   const [backupSuccess, setBackupSuccess] = useState<string | null>(null);
 
+  // User Profile & Personalization
+  const [userName, setUserName] = useState<string>('Your');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isPWAGuideOpen, setIsPWAGuideOpen] = useState(false);
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+
   // Search & Filter State
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedBrand, setSelectedBrand] = useState('All');
   const [selectedMaterial, setSelectedMaterial] = useState('All');
   const [selectedColor, setSelectedColor] = useState('All');
 
   // New Item Upload Form Modal State
   const [pendingItem, setPendingItem] = useState<{ image: string; color: string } | null>(null);
   const [formName, setFormName] = useState('');
+  const [formBrand, setFormBrand] = useState('');
   const [formCategory, setFormCategory] = useState<Category>('top');
   const [formMaterial, setFormMaterial] = useState('Cotton');
   const [formColors, setFormColors] = useState<string[]>([]);
@@ -74,16 +86,16 @@ export default function WardrobePage() {
   // Expanded Card / Edit Item Modal State
   const [editingItem, setEditingItem] = useState<ClothingItem | null>(null);
   const [editName, setEditName] = useState('');
+  const [editBrand, setEditBrand] = useState('');
   const [editCategory, setEditCategory] = useState<Category>('top');
   const [editMaterial, setEditMaterial] = useState('Cotton');
   const [editColors, setEditColors] = useState<string[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const backupInputRef = useRef<HTMLInputElement>(null);
 
   // Lock body scroll when a modal is open
   useEffect(() => {
-    if (pendingItem || editingItem) {
+    if (pendingItem || editingItem || isSettingsOpen || isPWAGuideOpen || isTutorialOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
@@ -91,10 +103,15 @@ export default function WardrobePage() {
     return () => {
       document.body.style.overflow = '';
     };
-  }, [pendingItem, editingItem]);
+  }, [pendingItem, editingItem, isSettingsOpen, isPWAGuideOpen, isTutorialOpen]);
 
   useEffect(() => {
     async function initStorage() {
+      if (typeof window !== 'undefined') {
+        const storedName = localStorage.getItem('clotho_user_name');
+        if (storedName) setUserName(storedName);
+      }
+
       if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.persist) {
         navigator.storage.persist().catch(() => {});
       }
@@ -112,27 +129,10 @@ export default function WardrobePage() {
 
     setLoading(true);
     try {
-      setStatus('AI Initializing...');
-      let transparentBlob: Blob = file;
-
-      try {
-        const importDynamic = new Function('url', 'return import(url)');
-        const { removeBackground } = await importDynamic(
-          'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/+esm'
-        );
-        setStatus('Removing background...');
-        transparentBlob = await removeBackground(file, {
-          progress: (key: string, current: number, total: number) => {
-            const pct = total > 0 ? Math.round((current / total) * 100) : 0;
-            if (pct > 0) {
-              setStatus(`Removing bg ${pct}%`);
-            }
-          },
-        });
-      } catch (bgError) {
-        console.warn('AI background removal fallback to original file:', bgError);
-        transparentBlob = file;
-      }
+      setStatus('AI Processing...');
+      const transparentBlob = await removeImageBackground(file, (_pct, stepMsg) => {
+        setStatus(stepMsg);
+      });
 
       setStatus('Optimizing item...');
       const { webpBase64, dominantColor } = await processAndCompressImage(transparentBlob, 0.88, 900);
@@ -140,6 +140,7 @@ export default function WardrobePage() {
       setPendingItem({ image: webpBase64, color: dominantColor });
       setFormColors(dominantColor !== 'N/D' ? [dominantColor] : ['Black']);
       setFormName(file.name.replace(/\.[^/.]+$/, ''));
+      setFormBrand('');
       setStatus('');
       setLoading(false);
     } catch (err) {
@@ -158,6 +159,7 @@ export default function WardrobePage() {
       id: crypto.randomUUID(),
       image: pendingItem.image,
       category: formCategory,
+      brand: formBrand.trim() || undefined,
       color: chosenColors[0],
       colors: chosenColors,
       material: formMaterial,
@@ -175,6 +177,7 @@ export default function WardrobePage() {
   const openEditModal = (item: ClothingItem) => {
     setEditingItem(item);
     setEditName(item.name);
+    setEditBrand(item.brand || '');
     setEditCategory(item.category);
     setEditMaterial(item.material);
     const initialColors = item.colors && item.colors.length > 0 ? item.colors : item.color ? [item.color] : ['Black'];
@@ -203,6 +206,7 @@ export default function WardrobePage() {
         return {
           ...i,
           name: editName.trim() || 'Untitled Piece',
+          brand: editBrand.trim() || undefined,
           category: editCategory,
           material: editMaterial,
           color: chosenColors[0],
@@ -270,20 +274,39 @@ export default function WardrobePage() {
   };
 
   const hasActiveFilters =
-    searchTerm !== '' || selectedCategory !== 'all' || selectedMaterial !== 'All' || selectedColor !== 'All';
+    searchTerm !== '' ||
+    selectedCategory !== 'all' ||
+    selectedBrand !== 'All' ||
+    selectedMaterial !== 'All' ||
+    selectedColor !== 'All';
 
   const resetFilters = () => {
     setSearchTerm('');
     setSelectedCategory('all');
+    setSelectedBrand('All');
     setSelectedMaterial('All');
     setSelectedColor('All');
   };
 
-  // Filtered Items (handles multi-color matching)
+  // Available brands in the wardrobe
+  const availableBrands = useMemo(() => {
+    const brandsSet = new Set(
+      items
+        .map((i) => i.brand?.trim())
+        .filter(Boolean) as string[]
+    );
+    return ['All', ...Array.from(brandsSet).sort()];
+  }, [items]);
+
+  // Filtered Items (handles search, category, brand, material, multi-color matching)
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
-      const matchSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const q = searchTerm.toLowerCase();
+      const matchSearch =
+        item.name.toLowerCase().includes(q) || (item.brand && item.brand.toLowerCase().includes(q));
+
       const matchCat = selectedCategory === 'all' || item.category === selectedCategory;
+      const matchBrand = selectedBrand === 'All' || (item.brand && item.brand.toLowerCase() === selectedBrand.toLowerCase());
       const matchMat = selectedMaterial === 'All' || item.material === selectedMaterial;
 
       const itemColors = item.colors && item.colors.length > 0 ? item.colors : item.color ? [item.color] : [];
@@ -291,12 +314,39 @@ export default function WardrobePage() {
         selectedColor === 'All' ||
         itemColors.some((c) => c.toLowerCase() === selectedColor.toLowerCase() || c.includes(selectedColor));
 
-      return matchSearch && matchCat && matchMat && matchCol;
+      return matchSearch && matchCat && matchBrand && matchMat && matchCol;
     });
-  }, [items, searchTerm, selectedCategory, selectedMaterial, selectedColor]);
+  }, [items, searchTerm, selectedCategory, selectedBrand, selectedMaterial, selectedColor]);
+
+  const displayTitle = userName && userName !== 'Your' ? `${userName}'s Wardrobe` : 'Your Wardrobe';
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 pb-32 space-y-6">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 pb-28 sm:pb-32 space-y-6">
+      {/* First-time iOS PWA installation guide prompt */}
+      <PWAInstallGuide
+        isOpen={isPWAGuideOpen ? true : undefined}
+        onClose={() => setIsPWAGuideOpen(false)}
+      />
+
+      {/* First-time Welcome / Onboarding Name & Tutorial */}
+      <OnboardingModal
+        isOpen={isTutorialOpen ? true : undefined}
+        onClose={() => setIsTutorialOpen(false)}
+        onNameSaved={(name) => setUserName(name)}
+      />
+
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        userName={userName}
+        onUpdateUserName={(name) => setUserName(name)}
+        onExportBackup={exportBackupJSON}
+        onImportBackup={importBackupJSON}
+        onOpenPWAGuide={() => setIsPWAGuideOpen(true)}
+        onOpenTutorial={() => setIsTutorialOpen(true)}
+      />
+
       {/* Toast Notification */}
       <AnimatePresence>
         {backupSuccess && (
@@ -313,44 +363,21 @@ export default function WardrobePage() {
       </AnimatePresence>
 
       {/* Header */}
-      <header className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+      <header className="flex justify-between items-center gap-4">
         <div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">Your Wardrobe</h1>
-          <p className="text-xs font-mono opacity-50 mt-1">
-            {filteredItems.length} of {items.length} pieces displayed
+          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight truncate max-w-[280px] sm:max-w-none">
+            {displayTitle}
+          </h1>
+          <p className="text-xs font-mono opacity-50 mt-0.5">
+            {filteredItems.length} of {items.length} pieces cataloged
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 flex-wrap">
-          {/* Backup & Restore Buttons */}
-          <button
-            onClick={exportBackupJSON}
-            title="Export Wardrobe Backup"
-            className="liquid-control p-3 rounded-2xl text-xs font-mono flex items-center gap-1.5 opacity-80 hover:opacity-100 transition-all hover:scale-102"
-          >
-            <Download className="w-4 h-4" />
-            <span className="hidden sm:inline">Backup</span>
-          </button>
-
-          <label
-            title="Restore from JSON Backup"
-            className="cursor-pointer liquid-control p-3 rounded-2xl text-xs font-mono flex items-center gap-1.5 opacity-80 hover:opacity-100 transition-all hover:scale-102"
-          >
-            <Upload className="w-4 h-4" />
-            <span className="hidden sm:inline">Restore</span>
-            <input
-              ref={backupInputRef}
-              type="file"
-              accept=".json"
-              className="hidden"
-              onChange={importBackupJSON}
-            />
-          </label>
-
+        <div className="flex items-center gap-2">
           {/* Add Piece Primary Button */}
-          <label className="cursor-pointer liquid-control px-5 py-3 rounded-2xl text-xs font-semibold tracking-wide uppercase flex items-center justify-center gap-2.5 shadow-md active:scale-95 transition-all hover:scale-102">
+          <label className="cursor-pointer liquid-control px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl text-xs font-semibold tracking-wide uppercase flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all hover:scale-102">
             {loading ? <Loader2 className="w-4 h-4 animate-spin text-blue-500" /> : <UploadCloud className="w-4 h-4" />}
-            <span className="truncate max-w-[200px]">{loading ? status : 'Add Piece'}</span>
+            <span className="truncate max-w-[140px] sm:max-w-[200px]">{loading ? status : 'Add Piece'}</span>
             <input
               ref={fileInputRef}
               type="file"
@@ -360,6 +387,16 @@ export default function WardrobePage() {
               disabled={loading}
             />
           </label>
+
+          {/* Settings Button */}
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            aria-label="Settings"
+            title="Settings & Preferences"
+            className="liquid-control p-2.5 sm:p-3 rounded-2xl text-xs font-mono flex items-center justify-center opacity-80 hover:opacity-100 transition-all hover:scale-105 active:scale-95"
+          >
+            <SettingsIcon className="w-4 h-4" />
+          </button>
         </div>
       </header>
 
@@ -370,7 +407,7 @@ export default function WardrobePage() {
           <Search className="w-4 h-4 absolute left-3.5 opacity-40 pointer-events-none" />
           <input
             type="text"
-            placeholder="Search by piece name or keyword..."
+            placeholder="Search by piece name, brand, or keyword..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full liquid-control rounded-2xl pl-10 pr-10 py-2.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
@@ -402,70 +439,99 @@ export default function WardrobePage() {
           ))}
         </div>
 
-        {/* Material Selector & Color Swatches Bar */}
-        <div className="space-y-3 pt-1">
-          {/* Material Row */}
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-mono opacity-50 whitespace-nowrap">Material:</span>
-            <select
-              value={selectedMaterial}
-              onChange={(e) => setSelectedMaterial(e.target.value)}
-              className="liquid-control rounded-xl px-3 py-1.5 text-xs font-medium focus:outline-none flex-1 max-w-xs cursor-pointer"
-            >
-              {MATERIALS.map((m) => (
-                <option key={m} value={m} className="text-black bg-white dark:bg-neutral-900 dark:text-white">
-                  {m}
+        {/* Brand & Material Selectors */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+          {/* Brand Filter */}
+          <div className="liquid-control rounded-2xl px-3.5 py-2 flex items-center justify-between gap-2">
+            <span className="text-[11px] font-mono opacity-50 whitespace-nowrap flex items-center gap-1">
+              <Tag className="w-3 h-3" /> Brand:
+            </span>
+            <div className="relative flex-1 flex items-center justify-end">
+              <select
+                value={selectedBrand}
+                onChange={(e) => setSelectedBrand(e.target.value)}
+                className="w-full bg-transparent text-xs font-medium text-right pr-6 appearance-none focus:outline-none cursor-pointer"
+              >
+                <option value="All" className="text-black bg-white dark:bg-neutral-900 dark:text-white">
+                  All Brands {availableBrands.length > 1 ? `(${availableBrands.length - 1})` : ''}
                 </option>
-              ))}
-            </select>
+                {availableBrands
+                  .filter((b) => b !== 'All')
+                  .map((brand) => (
+                    <option key={brand} value={brand} className="text-black bg-white dark:bg-neutral-900 dark:text-white">
+                      {brand}
+                    </option>
+                  ))}
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 opacity-40 absolute right-0 pointer-events-none" />
+            </div>
           </div>
 
-          {/* Color Swatches (Visual squares with selection ring) */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-mono opacity-50">Filter by Color:</span>
-              {selectedColor !== 'All' && (
-                <button
-                  onClick={() => setSelectedColor('All')}
-                  className="text-[10px] font-mono text-blue-400 hover:underline"
-                >
-                  Clear color ({selectedColor})
-                </button>
-              )}
+          {/* Material */}
+          <div className="liquid-control rounded-2xl px-3.5 py-2 flex items-center justify-between gap-2">
+            <span className="text-[11px] font-mono opacity-50 whitespace-nowrap">Material:</span>
+            <div className="relative flex-1 flex items-center justify-end">
+              <select
+                value={selectedMaterial}
+                onChange={(e) => setSelectedMaterial(e.target.value)}
+                className="w-full bg-transparent text-xs font-medium text-right pr-6 appearance-none focus:outline-none cursor-pointer"
+              >
+                {MATERIALS.map((m) => (
+                  <option key={m} value={m} className="text-black bg-white dark:bg-neutral-900 dark:text-white">
+                    {m}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 opacity-40 absolute right-0 pointer-events-none" />
             </div>
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
+          </div>
+        </div>
+
+        {/* Color Swatches Bar */}
+        <div className="space-y-1.5 pt-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-mono opacity-50">Filter by Color:</span>
+            {selectedColor !== 'All' && (
               <button
                 onClick={() => setSelectedColor('All')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-mono whitespace-nowrap transition-all flex items-center gap-1.5 ${
-                  selectedColor === 'All'
-                    ? 'bg-black text-white dark:bg-white dark:text-black shadow-md font-semibold'
-                    : 'liquid-control opacity-60 hover:opacity-100'
-                }`}
+                className="text-[10px] font-mono text-blue-400 hover:underline"
               >
-                All Colors
+                Clear color ({selectedColor})
               </button>
+            )}
+          </div>
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
+            <button
+              onClick={() => setSelectedColor('All')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-mono whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                selectedColor === 'All'
+                  ? 'bg-black text-white dark:bg-white dark:text-black shadow-md font-semibold'
+                  : 'liquid-control opacity-60 hover:opacity-100'
+              }`}
+            >
+              All Colors
+            </button>
 
-              {COLOR_PALETTE.map((c) => {
-                const isSelected = selectedColor === c.name;
-                return (
-                  <button
-                    key={c.name}
-                    onClick={() => setSelectedColor(isSelected ? 'All' : c.name)}
-                    className={`px-2.5 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all flex items-center gap-2 flex-shrink-0 ${
-                      isSelected
-                        ? 'bg-black text-white dark:bg-white dark:text-black shadow-md ring-2 ring-blue-500 font-semibold'
-                        : 'liquid-control opacity-70 hover:opacity-100'
-                    }`}
-                  >
-                    <span
-                      className="w-3.5 h-3.5 rounded-md border border-white/20 shadow-xs flex-shrink-0"
-                      style={{ backgroundColor: c.hex }}
-                    />
-                    <span>{c.name}</span>
-                  </button>
-                );
-              })}
-            </div>
+            {COLOR_PALETTE.map((c) => {
+              const isSelected = selectedColor === c.name;
+              return (
+                <button
+                  key={c.name}
+                  onClick={() => setSelectedColor(isSelected ? 'All' : c.name)}
+                  className={`px-2.5 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all flex items-center gap-2 flex-shrink-0 ${
+                    isSelected
+                      ? 'bg-black text-white dark:bg-white dark:text-black shadow-md ring-2 ring-blue-500 font-semibold'
+                      : 'liquid-control opacity-70 hover:opacity-100'
+                  }`}
+                >
+                  <span
+                    className="w-3.5 h-3.5 rounded-md border border-white/20 shadow-xs flex-shrink-0"
+                    style={{ backgroundColor: c.hex }}
+                  />
+                  <span>{c.name}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -536,10 +602,18 @@ export default function WardrobePage() {
                 </div>
 
                 {/* Item Info */}
-                <div className="mt-3.5 space-y-1.5 px-0.5">
-                  <div className="text-[10px] font-mono uppercase tracking-wider opacity-40 font-semibold truncate">
-                    {item.category}
+                <div className="mt-3.5 space-y-1 px-0.5">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-[10px] font-mono uppercase tracking-wider opacity-40 font-semibold truncate">
+                      {item.category}
+                    </span>
+                    {item.brand && (
+                      <span className="text-[10px] font-mono tracking-wider uppercase text-blue-400 font-semibold truncate max-w-[60%]">
+                        {item.brand}
+                      </span>
+                    )}
                   </div>
+
                   <div className="text-sm font-semibold leading-snug line-clamp-1 group-hover:text-blue-400 transition-colors" title={item.name}>
                     {item.name}
                   </div>
@@ -569,7 +643,7 @@ export default function WardrobePage() {
         </motion.div>
       )}
 
-      {/* Expanded Card / Edit Item Modal (Multi-Color Swatch Selector) */}
+      {/* Expanded Card / Edit Item Modal */}
       <AnimatePresence>
         {editingItem && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md overflow-hidden touch-none">
@@ -605,14 +679,26 @@ export default function WardrobePage() {
 
               {/* Edit Fields */}
               <div className="space-y-3.5 text-xs font-mono">
-                <div>
-                  <label className="block opacity-50 mb-1">Piece Name</label>
-                  <input
-                    type="text"
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    className="w-full liquid-control rounded-xl px-3.5 py-2.5 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block opacity-50 mb-1">Piece Name</label>
+                    <input
+                      type="text"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      className="w-full liquid-control rounded-xl px-3.5 py-2.5 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block opacity-50 mb-1">Brand / Label</label>
+                    <input
+                      type="text"
+                      value={editBrand}
+                      onChange={(e) => setEditBrand(e.target.value)}
+                      placeholder="e.g. Prada, Nike..."
+                      className="w-full liquid-control rounded-xl px-3.5 py-2.5 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -621,7 +707,7 @@ export default function WardrobePage() {
                     <select
                       value={editCategory}
                       onChange={(e) => setEditCategory(e.target.value as Category)}
-                      className="w-full liquid-control rounded-xl px-3.5 py-2.5 text-sm font-sans focus:outline-none cursor-pointer"
+                      className="w-full liquid-control rounded-xl px-3 py-2.5 text-sm font-sans focus:outline-none cursor-pointer"
                     >
                       {CATEGORIES.filter((c) => c.value !== 'all').map((c) => (
                         <option key={c.value} value={c.value} className="text-black bg-white dark:bg-neutral-900 dark:text-white">
@@ -635,7 +721,7 @@ export default function WardrobePage() {
                     <select
                       value={editMaterial}
                       onChange={(e) => setEditMaterial(e.target.value)}
-                      className="w-full liquid-control rounded-xl px-3.5 py-2.5 text-sm font-sans focus:outline-none cursor-pointer"
+                      className="w-full liquid-control rounded-xl px-3 py-2.5 text-sm font-sans focus:outline-none cursor-pointer"
                     >
                       {MATERIALS.filter((m) => m !== 'All').map((m) => (
                         <option key={m} value={m} className="text-black bg-white dark:bg-neutral-900 dark:text-white">
@@ -709,7 +795,7 @@ export default function WardrobePage() {
         )}
       </AnimatePresence>
 
-      {/* New Item Upload Form Modal (Multi-Color Swatch Selector) */}
+      {/* New Item Upload Form Modal */}
       <AnimatePresence>
         {pendingItem && (
           <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-hidden touch-none">
@@ -742,15 +828,27 @@ export default function WardrobePage() {
               </div>
 
               <div className="space-y-3.5 text-xs font-mono">
-                <div>
-                  <label className="block opacity-60 mb-1">Piece Name</label>
-                  <input
-                    type="text"
-                    value={formName}
-                    onChange={(e) => setFormName(e.target.value)}
-                    placeholder="e.g. Striped Cotton Shorts"
-                    className="w-full liquid-control rounded-xl px-3.5 py-2.5 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block opacity-60 mb-1">Piece Name</label>
+                    <input
+                      type="text"
+                      value={formName}
+                      onChange={(e) => setFormName(e.target.value)}
+                      placeholder="e.g. Striped Shorts"
+                      className="w-full liquid-control rounded-xl px-3.5 py-2.5 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block opacity-60 mb-1">Brand / Label</label>
+                    <input
+                      type="text"
+                      value={formBrand}
+                      onChange={(e) => setFormBrand(e.target.value)}
+                      placeholder="e.g. Jacquemus"
+                      className="w-full liquid-control rounded-xl px-3.5 py-2.5 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">

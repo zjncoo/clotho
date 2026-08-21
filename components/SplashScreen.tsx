@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, ExternalLink } from 'lucide-react';
+import { ArrowRight, ExternalLink, Shirt } from 'lucide-react';
 
 export default function SplashScreen() {
   const [isVisible, setIsVisible] = useState(true);
@@ -54,7 +54,7 @@ export default function SplashScreen() {
             className="flex flex-col items-center text-center space-y-6"
           >
             <div className="w-16 h-16 rounded-2xl liquid-control flex items-center justify-center border border-white/15 shadow-2xl">
-              <span className="text-2xl font-bold font-mono tracking-tighter text-white">C.</span>
+              <Shirt className="w-7 h-7 text-white" />
             </div>
 
             <div className="space-y-1.5">

@@ -5,16 +5,16 @@
 @tailwind utilities;
 
 :root {
-  --bg-gradient: radial-gradient(circle at 10% 20%, rgba(225, 228, 235, 0.85), rgba(248, 249, 252, 0.98)),
-                 radial-gradient(circle at 80% 80%, rgba(215, 225, 238, 0.7), rgba(255, 255, 255, 1));
+  --bg-gradient: radial-gradient(circle at 20% 15%, #e2e7f2, #f5f7fb 60%),
+                 radial-gradient(circle at 80% 85%, #dce5f2, #ffffff 80%);
   --text-primary: #121316;
   --text-secondary: #71717a;
-  --bg-solid: #f4f5f8;
+  --bg-solid: #f4f6fa;
 }
 
 .dark {
-  --bg-gradient: radial-gradient(circle at 20% 20%, #16171b, #0c0d10),
-                 radial-gradient(circle at 80% 80%, #1c1e24, #08090a);
+  --bg-gradient: radial-gradient(circle at 20% 20%, #16171b, #0c0d10 60%),
+                 radial-gradient(circle at 80% 80%, #1c1e24, #08090a 80%);
   --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
   --bg-solid: #0c0d10;
@@ -29,9 +29,7 @@ html {
 
 body {
   font-family: 'Neue Haas Grotesk Display Pro', 'Plus Jakarta Sans', 'Helvetica Neue', -apple-system, BlinkMacSystemFont, sans-serif;
-  background: var(--bg-gradient);
   background-color: var(--bg-solid);
-  background-attachment: fixed;
   color: var(--text-primary);
   min-height: 100vh;
   min-height: 100dvh;
@@ -39,8 +37,22 @@ body {
   padding-bottom: env(safe-area-inset-bottom, 0px);
   padding-left: env(safe-area-inset-left, 0px);
   padding-right: env(safe-area-inset-right, 0px);
-  transition: background 0.3s ease, color 0.3s ease;
+  transition: background-color 0.3s ease, color 0.3s ease;
   letter-spacing: -0.015em;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Fixed Global Ambient Background (Immune to iOS WebKit scrolling bugs) */
+.fixed-app-background {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  pointer-events: none;
+  background: var(--bg-gradient);
+  background-color: var(--bg-solid);
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
 }
 
 .overscroll-contain {
@@ -57,47 +69,47 @@ body {
 }
 
 .liquid-glass {
-  background: rgba(255, 255, 255, 0.45);
-  backdrop-filter: blur(30px) saturate(190%);
-  -webkit-backdrop-filter: blur(30px) saturate(190%);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(32px) saturate(190%);
+  -webkit-backdrop-filter: blur(32px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
   box-shadow: 
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.8),
-    0 12px 32px 0 rgba(0, 0, 0, 0.04);
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.9),
+    0 16px 40px 0 rgba(0, 0, 0, 0.05);
 }
 
 .dark .liquid-glass {
-  background: rgba(30, 32, 38, 0.5);
-  backdrop-filter: blur(30px) saturate(180%);
-  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  background: rgba(24, 26, 32, 0.65);
+  backdrop-filter: blur(32px) saturate(180%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 
     inset 0 1px 1px 0 rgba(255, 255, 255, 0.18),
-    0 16px 40px 0 rgba(0, 0, 0, 0.45);
+    0 18px 44px 0 rgba(0, 0, 0, 0.5);
 }
 
 .liquid-control {
-  background: rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.75);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.9), 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.9), 0 4px 12px rgba(0, 0, 0, 0.04);
   transition: all 0.2s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .liquid-control:hover {
-  background: rgba(255, 255, 255, 0.85);
-  transform: translateY(-1px) scale(1.01);
+  background: rgba(255, 255, 255, 0.95);
+  transform: translateY(-1px);
 }
 
 .dark .liquid-control {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.2), 0 4px 14px rgba(0, 0, 0, 0.3);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.2), 0 4px 14px rgba(0, 0, 0, 0.35);
 }
 
 .dark .liquid-control:hover {
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.13);
 }
 
 @keyframes shimmerSweep {
@@ -120,4 +132,3 @@ body {
 .animate-shimmer-sweep {
   animation: shimmerSweep 1.4s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
 }
-
