@@ -21,7 +21,7 @@ export default function Navbar() {
           }`}
         >
           <Shirt className="w-4 h-4" />
-          <span>Guardaroba</span>
+          <span>Wardrobe</span>
         </Link>
 
         <Link
@@ -33,14 +33,14 @@ export default function Navbar() {
           }`}
         >
           <Sparkles className="w-4 h-4" />
-          <span>Create</span>
+          <span>Studio</span>
         </Link>
 
         <div className="w-[1px] h-5 bg-black/10 dark:bg-white/10 mx-1" />
 
         <button
           onClick={toggleTheme}
-          aria-label="Toggle tema"
+          aria-label="Toggle theme"
           className="w-8 h-8 rounded-full liquid-control flex items-center justify-center text-neutral-700 dark:text-neutral-200"
         >
           {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
