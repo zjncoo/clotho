@@ -16,24 +16,9 @@ import {
 import { toPng } from 'html-to-image';
 import Link from 'next/link';
 import { COLOR_PALETTE, getColorHex } from '@/utils/colorPalette';
+import { FILTER_MATERIALS } from '@/utils/materialConstants';
 
 const STORAGE_KEY = 'closet_catalog_items';
-
-const MATERIALS = [
-  'All',
-  'Cotton',
-  'Denim',
-  'Wool',
-  'Linen',
-  'Silk',
-  'Leather',
-  'Suede',
-  'Cashmere',
-  'Technical / Nylon',
-  'Velvet',
-  'Knitwear',
-  'Synthetic',
-];
 
 interface SlotDefinition {
   category: Category;
@@ -370,7 +355,7 @@ export default function OutfitStudioPage() {
                       onChange={(e) => setDrawerMaterial(e.target.value)}
                       className="bg-transparent text-xs font-medium w-full focus:outline-none cursor-pointer"
                     >
-                      {MATERIALS.map((m) => (
+                      {FILTER_MATERIALS.map((m) => (
                         <option key={m} value={m} className="text-black bg-white dark:bg-neutral-900 dark:text-white">
                           {m}
                         </option>

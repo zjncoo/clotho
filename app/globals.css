@@ -24,6 +24,8 @@ html {
   background-color: var(--bg-solid);
   min-height: 100%;
   min-height: 100dvh;
+  width: 100%;
+  overflow-x: hidden;
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
@@ -33,6 +35,8 @@ body {
   color: var(--text-primary);
   min-height: 100vh;
   min-height: 100dvh;
+  width: 100%;
+  overflow-x: hidden;
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
   padding-left: env(safe-area-inset-left, 0px);
@@ -45,14 +49,14 @@ body {
 /* Fixed Global Ambient Background (Immune to iOS WebKit scrolling bugs) */
 .fixed-app-background {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: -10;
   pointer-events: none;
   background: var(--bg-gradient);
   background-color: var(--bg-solid);
-  width: 100vw;
-  height: 100vh;
-  height: 100dvh;
 }
 
 .overscroll-contain {
@@ -110,25 +114,4 @@ body {
 
 .dark .liquid-control:hover {
   background: rgba(255, 255, 255, 0.13);
-}
-
-@keyframes shimmerSweep {
-  0% {
-    transform: translateX(-100%) rotate(-15deg);
-    opacity: 0;
-  }
-  20% {
-    opacity: 1;
-  }
-  80% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateX(120%) rotate(-15deg);
-    opacity: 0;
-  }
-}
-
-.animate-shimmer-sweep {
-  animation: shimmerSweep 1.4s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
 }

@@ -57,7 +57,7 @@ export default function PWAInstallGuide({
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: '100%', opacity: 0 }}
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-            className="w-full max-w-md liquid-glass rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 space-y-5 shadow-2xl border border-white/20 dark:border-white/10 max-h-[90vh] overflow-y-auto overscroll-contain flex flex-col"
+            className="w-full max-w-lg liquid-glass rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 pb-8 space-y-5 shadow-2xl border border-white/20 dark:border-white/10 max-h-[90vh] max-h-[90dvh] overflow-y-auto overscroll-contain flex flex-col"
           >
             {/* Header */}
             <div className="flex justify-between items-center pb-2 border-b border-black/5 dark:border-white/5">

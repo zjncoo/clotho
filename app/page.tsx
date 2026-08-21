@@ -22,27 +22,12 @@ import { ClothingItem, Category } from '@/types';
 import { processAndCompressImage } from '@/utils/imageProcessor';
 import { removeImageBackground } from '@/utils/bgRemover';
 import { COLOR_PALETTE, getColorHex } from '@/utils/colorPalette';
+import { MATERIALS, FILTER_MATERIALS } from '@/utils/materialConstants';
 import SettingsModal from '@/components/SettingsModal';
 import OnboardingModal from '@/components/OnboardingModal';
 import PWAInstallGuide from '@/components/PWAInstallGuide';
 
 const STORAGE_KEY = 'closet_catalog_items';
-
-const MATERIALS = [
-  'All',
-  'Cotton',
-  'Denim',
-  'Wool',
-  'Linen',
-  'Silk',
-  'Leather',
-  'Suede',
-  'Cashmere',
-  'Technical / Nylon',
-  'Velvet',
-  'Knitwear',
-  'Synthetic',
-];
 
 const CATEGORIES: { value: string; label: string }[] = [
   { value: 'all', label: 'All Items' },
@@ -476,7 +461,7 @@ export default function WardrobePage() {
                 onChange={(e) => setSelectedMaterial(e.target.value)}
                 className="w-full bg-transparent text-xs font-medium text-right pr-6 appearance-none focus:outline-none cursor-pointer"
               >
-                {MATERIALS.map((m) => (
+                {FILTER_MATERIALS.map((m) => (
                   <option key={m} value={m} className="text-black bg-white dark:bg-neutral-900 dark:text-white">
                     {m}
                   </option>
