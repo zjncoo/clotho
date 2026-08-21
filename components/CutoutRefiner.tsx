@@ -237,7 +237,7 @@ export default function CutoutRefiner({
       const currentDist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
       if (lastPinchDist.current !== null && currentDist > 0) {
         const ratio = currentDist / lastPinchDist.current;
-        setZoom(z => parseFloat(Math.min(4, Math.max(1, z * ratio)).toFixed(2)));
+        setZoom(z => parseFloat(Math.min(4, Math.max(0.5, z * ratio)).toFixed(2)));
       }
       lastPinchDist.current = currentDist;
       return;
@@ -298,7 +298,7 @@ export default function CutoutRefiner({
 
   // ── Zoom helpers ───────────────────────────────────────────────────────────
   const zoomIn = () => setZoom(z => parseFloat(Math.min(4, z + 0.5).toFixed(1)));
-  const zoomOut = () => setZoom(z => parseFloat(Math.max(1, z - 0.5).toFixed(1)));
+  const zoomOut = () => setZoom(z => parseFloat(Math.max(0.5, z - 0.5).toFixed(1)));
 
   return (
     <div className="fixed inset-0 bg-black/85 backdrop-blur-xl z-50 flex items-center justify-center p-3 sm:p-4 overflow-hidden touch-none select-none">
@@ -353,7 +353,7 @@ export default function CutoutRefiner({
           <div className="flex items-center gap-1">
             <button
               onClick={zoomOut}
-              disabled={zoom <= 1}
+              disabled={zoom <= 0.5}
               className="p-1.5 liquid-control rounded-lg disabled:opacity-30"
               title="Zoom Out"
             >
@@ -385,13 +385,9 @@ export default function CutoutRefiner({
            */}
           <div
             style={{
-              width: canvasDims.w ? `${canvasDims.w * zoom}px` : '100%',
-              height: canvasDims.h ? `${canvasDims.h * zoom}px` : '100%',
-              minWidth: '100%',
-              minHeight: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              width: canvasDims.w ? `${Math.max(canvasDims.w * zoom, scrollRef.current?.clientWidth ?? 0)}px` : '100%',
+              height: canvasDims.h ? `${Math.max(canvasDims.h * zoom, scrollRef.current?.clientHeight ?? 0)}px` : '100%',
+              position: 'relative',
             }}
           >
             <canvas
@@ -406,6 +402,13 @@ export default function CutoutRefiner({
                 cursor: 'crosshair',
                 touchAction: 'none',
                 display: 'block',
+                position: 'absolute',
+                top: canvasDims.h
+                  ? `${Math.max(0, ((scrollRef.current?.clientHeight ?? 0) - canvasDims.h * zoom) / 2)}px`
+                  : '0',
+                left: canvasDims.w
+                  ? `${Math.max(0, ((scrollRef.current?.clientWidth ?? 0) - canvasDims.w * zoom) / 2)}px`
+                  : '0',
               }}
             />
           </div>

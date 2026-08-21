@@ -175,16 +175,58 @@ export default function OutfitStudioPage() {
   );
 
   const logOutfitToCalendar = async () => {
-    if (!mannequinRef.current || totalItemsCount === 0) return;
+    if (totalItemsCount === 0) return;
     setIsLoggingCalendar(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      const dataUrl = await toPng(mannequinRef.current, {
-        cacheBust: true,
-        pixelRatio: 2,
-        backgroundColor: '#0c0d10',
-      });
+      // Collect all selected clothing item images (base64 / data URLs)
+      const allItems: ClothingItem[] = Object.values(outfit).flatMap((arr) => arr ?? []);
+
+      // Build a square collage canvas from the actual garment images
+      const SIZE = 400; // output canvas size in px
+      const cols = Math.ceil(Math.sqrt(allItems.length));
+      const rows = Math.ceil(allItems.length / cols);
+      const cellW = Math.floor(SIZE / cols);
+      const cellH = Math.floor(SIZE / rows);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = SIZE;
+      canvas.height = SIZE;
+      const ctx = canvas.getContext('2d')!;
+
+      // Transparent background so circles in calendar show the checkerboard cleanly
+      ctx.clearRect(0, 0, SIZE, SIZE);
+
+      await Promise.all(
+        allItems.map((item, idx) =>
+          new Promise<void>((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+              const col = idx % cols;
+              const row = Math.floor(idx / cols);
+              const x = col * cellW;
+              const y = row * cellH;
+
+              // Contain the image inside the cell with a small padding
+              const pad = Math.floor(cellW * 0.08);
+              const availW = cellW - pad * 2;
+              const availH = cellH - pad * 2;
+              const scale = Math.min(availW / img.naturalWidth, availH / img.naturalHeight);
+              const dw = img.naturalWidth * scale;
+              const dh = img.naturalHeight * scale;
+              const dx = x + pad + (availW - dw) / 2;
+              const dy = y + pad + (availH - dh) / 2;
+
+              ctx.drawImage(img, dx, dy, dw, dh);
+              resolve();
+            };
+            img.onerror = () => resolve(); // skip broken images
+            img.src = item.image;
+          })
+        )
+      );
+
+      const dataUrl = canvas.toDataURL('image/png');
 
       const todayStr = formatLocalDate(new Date());
       const newEntry: CalendarEntry = {
