@@ -30,6 +30,8 @@ import SettingsModal from '@/components/SettingsModal';
 import OnboardingModal from '@/components/OnboardingModal';
 import PWAInstallGuide from '@/components/PWAInstallGuide';
 import CutoutRefiner from '@/components/CutoutRefiner';
+import FullscreenAddPiece from '@/components/FullscreenAddPiece';
+import { generateHarmonicSuite } from '@/utils/colorMath';
 import { exportWardrobeToFiles, importWardrobeFromFiles } from '@/utils/cloudStorage';
 
 const STORAGE_KEY = 'closet_catalog_items';
@@ -67,7 +69,8 @@ export default function WardrobePage() {
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [isColorDropdownOpen, setIsColorDropdownOpen] = useState(false);
 
-  // New Item Upload Form Modal State
+  // New Item Fullscreen Flow State
+  const [isAddPieceOpen, setIsAddPieceOpen] = useState(false);
   const [pendingItem, setPendingItem] = useState<{ image: string; color: string } | null>(null);
   const [isRefiningCutout, setIsRefiningCutout] = useState(false);
   const [formName, setFormName] = useState('');
@@ -85,10 +88,16 @@ export default function WardrobePage() {
   const [editColors, setEditColors] = useState<string[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { accent, theme } = useTheme();
+  const isDark = theme === 'dark';
+
+  const suite = useMemo(() => {
+    return generateHarmonicSuite(accent.hex, isDark);
+  }, [accent.hex, isDark]);
 
   // Lock body scroll when a modal is open
   useEffect(() => {
-    if (pendingItem || editingItem || isSettingsOpen || isPWAGuideOpen || isTutorialOpen) {
+    if (isAddPieceOpen || pendingItem || editingItem || isSettingsOpen || isPWAGuideOpen || isTutorialOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
@@ -96,7 +105,7 @@ export default function WardrobePage() {
     return () => {
       document.body.style.overflow = '';
     };
-  }, [pendingItem, editingItem, isSettingsOpen, isPWAGuideOpen, isTutorialOpen]);
+  }, [isAddPieceOpen, pendingItem, editingItem, isSettingsOpen, isPWAGuideOpen, isTutorialOpen]);
 
   useEffect(() => {
     async function initStorage() {
@@ -316,8 +325,6 @@ export default function WardrobePage() {
     });
   }, [items, searchTerm, selectedCategory, selectedBrand, selectedMaterial, selectedColors]);
 
-  const { accent } = useTheme();
-
   const displayTitle = userName && userName !== 'Your' ? `${userName}'s Wardrobe` : 'Your Wardrobe';
 
   return (
@@ -355,6 +362,17 @@ export default function WardrobePage() {
         onOpenTutorial={() => setIsTutorialOpen(true)}
       />
 
+      {/* Fullscreen Step-by-Step Garment Creator (100dvh x 100vw) */}
+      <FullscreenAddPiece
+        isOpen={isAddPieceOpen}
+        onClose={() => setIsAddPieceOpen(false)}
+        onSave={async (newItem) => {
+          const updated = [newItem, ...items];
+          setItems(updated);
+          await set(STORAGE_KEY, updated);
+        }}
+      />
+
       {/* Toast Notification */}
       <AnimatePresence>
         {backupSuccess && (
@@ -362,7 +380,7 @@ export default function WardrobePage() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="fixed top-6 left-1/2 -translate-x-1/2 z-50 liquid-glass rounded-full px-4 py-2 flex items-center gap-2 shadow-2xl border border-emerald-500/40 text-xs font-mono text-emerald-400"
+            className="fixed top-6 left-1/2 -translate-x-1/2 z-50 rounded-full px-4 py-2 flex items-center gap-2 border border-emerald-500/40 text-xs font-mono text-emerald-600 dark:text-emerald-400 bg-white dark:bg-black"
           >
             <CheckCircle2 className="w-4 h-4" />
             <span>{backupSuccess}</span>
@@ -381,24 +399,17 @@ export default function WardrobePage() {
           </p>
         </div>
 
-        {/* Action Row: Compact Add Piece (with custom Accent Theme Color) + Settings Icon */}
+        {/* Action Row: Fullscreen Step-by-Step Add Piece + Settings */}
         <div className="flex items-center gap-2 pt-0.5">
-          {/* Primary Add Piece Button */}
-          <label
+          <button
+            type="button"
+            onClick={() => setIsAddPieceOpen(true)}
             style={{ backgroundColor: accent.hex }}
-            className="cursor-pointer py-2.5 px-5 rounded-2xl text-white font-semibold text-xs uppercase tracking-wider inline-flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all hover:opacity-95"
+            className="py-2.5 px-5 rounded-2xl text-white font-semibold text-xs uppercase tracking-wider inline-flex items-center justify-center gap-2 border border-black/10 active:scale-95 transition-all hover:opacity-90 shadow-none"
           >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <UploadCloud className="w-4 h-4" />}
-            <span>{loading ? status : 'Add Piece'}</span>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleUpload}
-              disabled={loading}
-            />
-          </label>
+            <UploadCloud className="w-4 h-4" />
+            <span>Add Piece</span>
+          </button>
 
           {/* Settings Button directly to the right of Add Piece */}
           <button
@@ -406,7 +417,7 @@ export default function WardrobePage() {
             onClick={() => setIsSettingsOpen(true)}
             aria-label="Settings"
             title="Settings & Preferences"
-            className="liquid-control p-2.5 rounded-2xl flex items-center justify-center hover:opacity-100 transition-all active:scale-95 shadow-md flex-shrink-0"
+            className="p-2.5 rounded-2xl border border-black/10 dark:border-white/10 flex items-center justify-center hover:opacity-100 transition-all active:scale-95 flex-shrink-0 bg-white dark:bg-[#18191e]"
           >
             <SettingsIcon className="w-4 h-4" />
           </button>
@@ -437,19 +448,23 @@ export default function WardrobePage() {
 
         {/* Category Pills */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
-          {CATEGORIES.map((c) => (
-            <button
-              key={c.value}
-              onClick={() => setSelectedCategory(c.value)}
-              className={`px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all flex-shrink-0 ${
-                selectedCategory === c.value
-                  ? 'bg-black text-white dark:bg-white dark:text-black shadow-md scale-[1.02]'
-                  : 'liquid-control opacity-70 hover:opacity-100'
-              }`}
-            >
-              {c.label}
-            </button>
-          ))}
+          {CATEGORIES.map((c) => {
+            const isSelected = selectedCategory === c.value;
+            return (
+              <button
+                key={c.value}
+                onClick={() => setSelectedCategory(c.value)}
+                style={isSelected ? { backgroundColor: accent.hex, color: '#ffffff' } : {}}
+                className={`px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all flex-shrink-0 active:scale-95 ${
+                  isSelected
+                    ? 'shadow-md scale-[1.02] font-bold'
+                    : 'liquid-control opacity-70 hover:opacity-100'
+                }`}
+              >
+                {c.label}
+              </button>
+            );
+          })}
         </div>
 
         {/* Brand, Material, and Multi-Color Dropdown Selectors */}
@@ -504,9 +519,18 @@ export default function WardrobePage() {
             <button
               type="button"
               onClick={() => setIsColorDropdownOpen(!isColorDropdownOpen)}
+              style={
+                selectedColors.length > 0
+                  ? {
+                      borderColor: accent.hex,
+                      backgroundColor: `${accent.hex}15`,
+                      color: accent.hex,
+                    }
+                  : {}
+              }
               className={`w-full liquid-control rounded-2xl px-3.5 py-2.5 flex items-center justify-between gap-2 transition-all ${
                 selectedColors.length > 0
-                  ? 'ring-2 ring-blue-500/40 bg-blue-500/10 text-blue-400 font-semibold'
+                  ? 'border shadow-xs font-semibold'
                   : ''
               }`}
             >
@@ -529,7 +553,7 @@ export default function WardrobePage() {
                         />
                       ))}
                     </div>
-                    <span className="text-xs font-semibold text-blue-400 font-mono">
+                    <span className="text-xs font-semibold font-mono" style={{ color: accent.hex }}>
                       {selectedColors.length === 1 ? selectedColors[0] : `${selectedColors.length} selected`}
                     </span>
                   </div>
@@ -566,7 +590,8 @@ export default function WardrobePage() {
                     <button
                       type="button"
                       onClick={() => setSelectedColors([])}
-                      className="text-[11px] font-mono text-blue-400 hover:underline"
+                      style={{ color: accent.hex }}
+                      className="text-[11px] font-mono hover:underline"
                     >
                       Clear All
                     </button>
@@ -581,10 +606,19 @@ export default function WardrobePage() {
                         key={c.name}
                         type="button"
                         onClick={() => toggleFilterColor(c.name)}
-                        className={`p-2 rounded-xl text-[11px] font-medium flex items-center gap-2 transition-all text-left ${
+                        style={
                           isSelected
-                            ? 'bg-blue-500/15 text-blue-400 ring-1.5 ring-blue-500/50 font-semibold shadow-xs'
-                            : 'liquid-control opacity-70 hover:opacity-100'
+                            ? {
+                                borderColor: accent.hex,
+                                backgroundColor: `${accent.hex}18`,
+                                color: accent.hex,
+                              }
+                            : {}
+                        }
+                        className={`p-2 rounded-xl text-[11px] font-medium flex items-center gap-2 transition-all text-left border ${
+                          isSelected
+                            ? 'shadow-xs font-semibold'
+                            : 'border-transparent liquid-control opacity-70 hover:opacity-100'
                         }`}
                       >
                         <span
@@ -592,7 +626,7 @@ export default function WardrobePage() {
                           style={{ backgroundColor: c.hex }}
                         />
                         <span className="truncate flex-1">{c.name}</span>
-                        {isSelected && <Check className="w-3 h-3 flex-shrink-0 text-blue-400" />}
+                        {isSelected && <Check className="w-3 h-3 flex-shrink-0" style={{ color: accent.hex }} />}
                       </button>
                     );
                   })}

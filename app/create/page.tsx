@@ -12,12 +12,17 @@ import {
   Check,
   Plus,
   Tag,
+  CalendarDays,
+  Flame,
+  ArrowRight,
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import Link from 'next/link';
 import { COLOR_PALETTE, getColorHex } from '@/utils/colorPalette';
 import { FILTER_MATERIALS } from '@/utils/materialConstants';
 import { useTheme } from '@/context/ThemeContext';
+import { formatLocalDate, saveCalendarEntry } from '@/utils/calendarStorage';
+import { CalendarEntry } from '@/types';
 
 const STORAGE_KEY = 'closet_catalog_items';
 
@@ -45,6 +50,8 @@ export default function OutfitStudioPage() {
   const [outfit, setOutfit] = useState<Partial<Record<Category, ClothingItem[]>>>({});
   const [activeDrawerCategory, setActiveDrawerCategory] = useState<Category | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isLoggingCalendar, setIsLoggingCalendar] = useState(false);
+  const [loggedStreak, setLoggedStreak] = useState<number | null>(null);
 
   // Drawer filtering state
   const [drawerBrand, setDrawerBrand] = useState('All');
@@ -167,6 +174,37 @@ export default function OutfitStudioPage() {
     0
   );
 
+  const logOutfitToCalendar = async () => {
+    if (!mannequinRef.current || totalItemsCount === 0) return;
+    setIsLoggingCalendar(true);
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      const dataUrl = await toPng(mannequinRef.current, {
+        cacheBust: true,
+        pixelRatio: 2,
+        backgroundColor: '#0c0d10',
+      });
+
+      const todayStr = formatLocalDate(new Date());
+      const newEntry: CalendarEntry = {
+        id: crypto.randomUUID(),
+        date: todayStr,
+        title: `Look of ${new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`,
+        outfitImage: dataUrl,
+        slotItems: outfit,
+        createdAt: Date.now(),
+      };
+
+      const { streak } = await saveCalendarEntry(newEntry);
+      setLoggedStreak(streak.currentStreak);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoggingCalendar(false);
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-4 pb-28 sm:pb-32 space-y-4 sm:space-y-6">
       {/* Action Header */}
@@ -174,29 +212,94 @@ export default function OutfitStudioPage() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Studio</h1>
           <p className="text-xs font-mono opacity-50 mt-0.5">
-            Tap slots to assemble outfit ({totalItemsCount} selected)
+            Tap slots to assemble outfit ({totalItemsCount} pieces)
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <button
             onClick={() => setOutfit({})}
             disabled={totalItemsCount === 0}
-            className="text-xs font-mono opacity-60 hover:opacity-100 disabled:opacity-20 flex items-center gap-1 transition-opacity px-3 py-2 rounded-xl liquid-control"
+            className="text-xs font-mono opacity-60 hover:opacity-100 disabled:opacity-20 flex items-center gap-1 transition-opacity px-2.5 py-2 rounded-xl liquid-control"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Reset</span>
           </button>
+
+          <button
+            onClick={logOutfitToCalendar}
+            disabled={totalItemsCount === 0 || isLoggingCalendar}
+            style={totalItemsCount > 0 ? { backgroundColor: accent.hex } : {}}
+            className="liquid-control text-xs font-semibold tracking-wider px-3.5 py-2.5 rounded-full flex items-center gap-1.5 text-white disabled:opacity-30 disabled:cursor-not-allowed shadow-md active:scale-95 transition-all"
+          >
+            {isLoggingCalendar ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Flame className="w-3.5 h-3.5" />
+            )}
+            <span>Wear Today</span>
+          </button>
+
           <button
             onClick={exportOutfitPNG}
             disabled={totalItemsCount === 0 || isExporting}
-            className="liquid-control text-xs font-semibold tracking-wider uppercase px-4 py-2.5 rounded-full flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed shadow-md active:scale-95 transition-all"
+            className="liquid-control text-xs font-semibold tracking-wider uppercase px-3.5 py-2.5 rounded-full flex items-center gap-1.5 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm active:scale-95 transition-all"
           >
             {isExporting ? <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" /> : <Download className="w-3.5 h-3.5" />}
-            <span>Export PNG</span>
+            <span className="hidden sm:inline">Export</span>
           </button>
         </div>
       </div>
+
+      {/* Celebratory Streak Modal */}
+      <AnimatePresence>
+        {loggedStreak !== null && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="liquid-glass rounded-[2.5rem] max-w-sm w-full p-6 text-center space-y-4 shadow-2xl border border-white/20 dark:border-white/10 flex flex-col items-center"
+            >
+              <div className="w-16 h-16 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-500 shadow-inner">
+                <Flame className="w-9 h-9 animate-bounce" />
+              </div>
+
+              <div className="space-y-1">
+                <div className="text-[11px] font-mono uppercase tracking-widest text-orange-500 font-bold">
+                  Outfit Logged!
+                </div>
+                <h3 className="text-2xl font-extrabold tracking-tight">
+                  {loggedStreak} Day Streak 🔥
+                </h3>
+                <p className="text-xs font-mono opacity-60 px-2">
+                  {loggedStreak > 1
+                    ? `Incredible! You've dressed with intention for ${loggedStreak} consecutive days.`
+                    : 'Your style streak has officially begun. Keep it alive tomorrow!'}
+                </p>
+              </div>
+
+              <div className="w-full flex items-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setLoggedStreak(null)}
+                  className="flex-1 py-2.5 liquid-control rounded-xl text-xs font-mono font-semibold"
+                >
+                  Stay in Studio
+                </button>
+                <Link
+                  href="/calendar"
+                  style={{ backgroundColor: accent.hex }}
+                  className="flex-1 py-2.5 rounded-xl text-xs font-mono font-bold text-white shadow-lg active:scale-95 transition-all flex items-center justify-center gap-1"
+                >
+                  <span>View Calendar</span>
+                  <ArrowRight className="w-3 h-3" />
+                </Link>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Interactive Mannequin Canvas */}
       <div className="flex flex-col items-center">
@@ -371,10 +474,11 @@ export default function OutfitStudioPage() {
                 <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
                   <button
                     onClick={() => setDrawerColor('All')}
-                    className={`px-2.5 py-1 rounded-lg text-[10px] whitespace-nowrap transition-all flex items-center gap-1 ${
+                    style={drawerColor === 'All' ? { backgroundColor: accent.hex, color: '#ffffff' } : {}}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] whitespace-nowrap transition-all flex-shrink-0 active:scale-95 ${
                       drawerColor === 'All'
-                        ? 'bg-black text-white dark:bg-white dark:text-black shadow-xs font-semibold'
-                        : 'liquid-control opacity-60 hover:opacity-100'
+                        ? 'shadow-xs font-semibold'
+                        : 'liquid-control opacity-70 hover:opacity-100'
                     }`}
                   >
                     All Colors
@@ -385,9 +489,10 @@ export default function OutfitStudioPage() {
                       <button
                         key={c.name}
                         onClick={() => setDrawerColor(isSelected ? 'All' : c.name)}
-                        className={`px-2 py-1 rounded-lg text-[10px] whitespace-nowrap transition-all flex items-center gap-1.5 flex-shrink-0 ${
+                        style={isSelected ? { backgroundColor: accent.hex, color: '#ffffff' } : {}}
+                        className={`px-2 py-1 rounded-lg text-[10px] whitespace-nowrap transition-all flex items-center gap-1.5 flex-shrink-0 active:scale-95 ${
                           isSelected
-                            ? 'bg-black text-white dark:bg-white dark:text-black shadow-xs ring-1 ring-blue-500 font-semibold'
+                            ? 'shadow-xs font-semibold'
                             : 'liquid-control opacity-70 hover:opacity-100'
                         }`}
                       >
@@ -409,7 +514,8 @@ export default function OutfitStudioPage() {
                         setDrawerMaterial('All');
                         setDrawerColor('All');
                       }}
-                      className="text-[10px] text-blue-400 hover:underline"
+                      style={{ color: accent.hex }}
+                      className="text-[10px] hover:underline"
                     >
                       Reset drawer filters
                     </button>
@@ -426,7 +532,8 @@ export default function OutfitStudioPage() {
                     </p>
                     <Link
                       href="/"
-                      className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-400 hover:underline pt-1"
+                      style={{ color: accent.hex }}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium hover:underline pt-1"
                     >
                       <Plus className="w-3.5 h-3.5" /> Add one in your Wardrobe
                     </Link>
@@ -440,14 +547,25 @@ export default function OutfitStudioPage() {
                         <button
                           key={item.id}
                           onClick={() => toggleItemInSlot(item)}
+                          style={
+                            isSelected
+                              ? {
+                                  borderColor: accent.hex,
+                                  backgroundColor: `${accent.hex}15`,
+                                }
+                              : {}
+                          }
                           className={`aspect-square p-2.5 rounded-2xl liquid-control flex flex-col items-center justify-between transition-all relative ${
                             isSelected
-                              ? 'ring-2 ring-blue-500 bg-blue-500/10 shadow-lg scale-[0.98]'
+                              ? 'border-2 shadow-lg scale-[0.98]'
                               : 'hover:scale-[1.02] hover:shadow-md'
                           }`}
                         >
                           {isSelected && (
-                            <div className="absolute top-2 right-2 bg-blue-500 text-white p-1 rounded-full shadow-md z-10">
+                            <div
+                              className="absolute top-2 right-2 text-white p-1 rounded-full shadow-md z-10"
+                              style={{ backgroundColor: accent.hex }}
+                            >
                               <Check className="w-3 h-3" />
                             </div>
                           )}
