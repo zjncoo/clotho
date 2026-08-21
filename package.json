@@ -12,6 +12,7 @@
     "@ducanh2912/next-pwa": "^10.2.7",
     "clsx": "^2.1.1",
     "framer-motion": "^11.2.10",
+    "heic2any": "^0.0.4",
     "html-to-image": "^1.11.11",
     "idb-keyval": "^6.2.1",
     "lucide-react": "^0.395.0",
