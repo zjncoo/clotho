@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { ThemeProvider } from '@/context/ThemeContext';
 import Navbar from '@/components/Navbar';
 import SplashScreen from '@/components/SplashScreen';
+import AppShell from '@/components/AppShell';
 import './globals.css';
 
 export const viewport: Viewport = {
@@ -38,7 +39,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider>
           <SplashScreen />
           <Navbar />
-          <main className="min-h-screen">{children}</main>
+          <AppShell>
+            <main className="min-h-screen">{children}</main>
+          </AppShell>
         </ThemeProvider>
       </body>
     </html>

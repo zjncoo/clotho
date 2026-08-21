@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { get } from 'idb-keyval';
 import { Category, ClothingItem } from '@/types';
@@ -11,13 +11,29 @@ import {
   X,
   Check,
   Plus,
-  Trash2,
-  Layers,
+  Filter,
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import Link from 'next/link';
+import { COLOR_PALETTE, getColorHex } from '@/utils/colorPalette';
 
 const STORAGE_KEY = 'closet_catalog_items';
+
+const MATERIALS = [
+  'All',
+  'Cotton',
+  'Denim',
+  'Wool',
+  'Linen',
+  'Silk',
+  'Leather',
+  'Suede',
+  'Cashmere',
+  'Technical / Nylon',
+  'Velvet',
+  'Knitwear',
+  'Synthetic',
+];
 
 interface SlotDefinition {
   category: Category;
@@ -44,6 +60,10 @@ export default function OutfitStudioPage() {
   const [activeDrawerCategory, setActiveDrawerCategory] = useState<Category | null>(null);
   const [isExporting, setIsExporting] = useState(false);
 
+  // Drawer filtering state
+  const [drawerMaterial, setDrawerMaterial] = useState('All');
+  const [drawerColor, setDrawerColor] = useState('All');
+
   const mannequinRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -55,7 +75,23 @@ export default function OutfitStudioPage() {
   }, []);
 
   const activeSlotConfig = SLOTS.find((s) => s.category === activeDrawerCategory);
-  const activeCategoryItems = items.filter((i) => i.category === activeDrawerCategory);
+
+  // Filtered items in drawer by category + material + color swatches
+  const filteredCategoryItems = useMemo(() => {
+    if (!activeDrawerCategory) return [];
+
+    return items
+      .filter((i) => i.category === activeDrawerCategory)
+      .filter((i) => {
+        const matchMat = drawerMaterial === 'All' || i.material === drawerMaterial;
+        const itemColors = i.colors && i.colors.length > 0 ? i.colors : i.color ? [i.color] : [];
+        const matchCol =
+          drawerColor === 'All' ||
+          itemColors.some((c) => c.toLowerCase() === drawerColor.toLowerCase() || c.includes(drawerColor));
+        return matchMat && matchCol;
+      });
+  }, [items, activeDrawerCategory, drawerMaterial, drawerColor]);
+
   const currentSlotSelectedItems = (activeDrawerCategory && outfit[activeDrawerCategory]) || [];
 
   // Toggle item in category (supports multiple items)
@@ -84,6 +120,12 @@ export default function OutfitStudioPage() {
       delete copy[cat];
       return copy;
     });
+  };
+
+  const openDrawer = (cat: Category) => {
+    setDrawerMaterial('All');
+    setDrawerColor('All');
+    setActiveDrawerCategory(cat);
   };
 
   const exportOutfitPNG = async () => {
@@ -162,17 +204,17 @@ export default function OutfitStudioPage() {
               title="Headwear"
               icon="🧢"
               items={outfit.headwear}
-              onClick={() => setActiveDrawerCategory('headwear')}
+              onClick={() => openDrawer('headwear')}
               className="w-36 h-20"
             />
 
-            {/* 2. Necklace (Directly below headwear) */}
+            {/* 2. Necklace */}
             <MannequinSlotButton
               slotKey="necklace"
               title="Necklace"
               icon="📿"
               items={outfit.necklace}
-              onClick={() => setActiveDrawerCategory('necklace')}
+              onClick={() => openDrawer('necklace')}
               className="w-32 h-14 -mt-1 z-20"
             />
 
@@ -184,7 +226,7 @@ export default function OutfitStudioPage() {
                 title="Bag"
                 icon="👜"
                 items={outfit.bag}
-                onClick={() => setActiveDrawerCategory('bag')}
+                onClick={() => openDrawer('bag')}
                 className="w-20 h-28"
               />
 
@@ -194,7 +236,7 @@ export default function OutfitStudioPage() {
                 title="Tops & Jackets"
                 icon="👕"
                 items={outfit.top}
-                onClick={() => setActiveDrawerCategory('top')}
+                onClick={() => openDrawer('top')}
                 className="flex-1 h-44"
               />
 
@@ -204,7 +246,7 @@ export default function OutfitStudioPage() {
                 title="Bracelet"
                 icon="⌚"
                 items={outfit.bracelet}
-                onClick={() => setActiveDrawerCategory('bracelet')}
+                onClick={() => openDrawer('bracelet')}
                 className="w-20 h-28"
               />
             </div>
@@ -215,7 +257,7 @@ export default function OutfitStudioPage() {
               title="Pants & Skirts"
               icon="👖"
               items={outfit.bottom}
-              onClick={() => setActiveDrawerCategory('bottom')}
+              onClick={() => openDrawer('bottom')}
               className="w-4/5 h-44"
             />
 
@@ -227,7 +269,7 @@ export default function OutfitStudioPage() {
                 title="Shoes"
                 icon="👟"
                 items={outfit.shoes}
-                onClick={() => setActiveDrawerCategory('shoes')}
+                onClick={() => openDrawer('shoes')}
                 className="w-44 h-24"
               />
 
@@ -237,7 +279,7 @@ export default function OutfitStudioPage() {
                 title="Accessories"
                 icon="🕶️"
                 items={outfit.accessories}
-                onClick={() => setActiveDrawerCategory('accessories')}
+                onClick={() => openDrawer('accessories')}
                 className="w-28 h-24"
               />
             </div>
@@ -245,7 +287,7 @@ export default function OutfitStudioPage() {
         </div>
       </div>
 
-      {/* Drawer / Bottom Sheet Modal for Direct Multi-Selection */}
+      {/* Drawer / Bottom Sheet Modal with Filter by Color & Material */}
       <AnimatePresence>
         {activeDrawerCategory && activeSlotConfig && (
           <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-md">
@@ -254,7 +296,7 @@ export default function OutfitStudioPage() {
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: '100%', opacity: 0 }}
               transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-              className="w-full max-w-lg liquid-glass rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 max-h-[85vh] flex flex-col shadow-2xl border border-white/20 dark:border-white/10"
+              className="w-full max-w-lg liquid-glass rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 max-h-[88vh] flex flex-col shadow-2xl border border-white/20 dark:border-white/10"
             >
               {/* Drawer Header */}
               <div className="flex justify-between items-center pb-3 border-b border-black/5 dark:border-white/5">
@@ -263,7 +305,7 @@ export default function OutfitStudioPage() {
                   <div>
                     <h2 className="text-lg font-bold tracking-tight">{activeSlotConfig.label}</h2>
                     <p className="text-xs font-mono opacity-50">
-                      {currentSlotSelectedItems.length} selected (multi-select enabled)
+                      {currentSlotSelectedItems.length} selected (tap pieces to toggle)
                     </p>
                   </div>
                 </div>
@@ -275,12 +317,76 @@ export default function OutfitStudioPage() {
                 </button>
               </div>
 
+              {/* Drawer Filter Controls: Material & Color Swatches */}
+              <div className="py-3 space-y-2.5 border-b border-black/5 dark:border-white/5 text-xs font-mono">
+                {/* Material Select */}
+                <div className="flex items-center gap-2">
+                  <span className="opacity-50">Material:</span>
+                  <select
+                    value={drawerMaterial}
+                    onChange={(e) => setDrawerMaterial(e.target.value)}
+                    className="liquid-control rounded-xl px-2.5 py-1 text-xs focus:outline-none flex-1 max-w-[200px] cursor-pointer"
+                  >
+                    {MATERIALS.map((m) => (
+                      <option key={m} value={m} className="text-black bg-white dark:bg-neutral-900 dark:text-white">
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                  {(drawerMaterial !== 'All' || drawerColor !== 'All') && (
+                    <button
+                      onClick={() => {
+                        setDrawerMaterial('All');
+                        setDrawerColor('All');
+                      }}
+                      className="text-[10px] text-blue-400 hover:underline ml-auto"
+                    >
+                      Reset filters
+                    </button>
+                  )}
+                </div>
+
+                {/* Color Swatches */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
+                  <button
+                    onClick={() => setDrawerColor('All')}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] whitespace-nowrap transition-all flex items-center gap-1 ${
+                      drawerColor === 'All'
+                        ? 'bg-black text-white dark:bg-white dark:text-black shadow-xs font-semibold'
+                        : 'liquid-control opacity-60 hover:opacity-100'
+                    }`}
+                  >
+                    All Colors
+                  </button>
+                  {COLOR_PALETTE.map((c) => {
+                    const isSelected = drawerColor === c.name;
+                    return (
+                      <button
+                        key={c.name}
+                        onClick={() => setDrawerColor(isSelected ? 'All' : c.name)}
+                        className={`px-2 py-1 rounded-lg text-[10px] whitespace-nowrap transition-all flex items-center gap-1.5 flex-shrink-0 ${
+                          isSelected
+                            ? 'bg-black text-white dark:bg-white dark:text-black shadow-xs ring-1 ring-blue-500 font-semibold'
+                            : 'liquid-control opacity-70 hover:opacity-100'
+                        }`}
+                      >
+                        <span
+                          className="w-2.5 h-2.5 rounded-sm border border-white/20 flex-shrink-0"
+                          style={{ backgroundColor: c.hex }}
+                        />
+                        <span>{c.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Drawer Content */}
               <div className="flex-1 overflow-y-auto py-4 pr-1">
-                {activeCategoryItems.length === 0 ? (
+                {filteredCategoryItems.length === 0 ? (
                   <div className="p-8 text-center border border-dashed border-black/10 dark:border-white/10 rounded-2xl space-y-2">
                     <p className="text-xs font-mono opacity-50">
-                      No pieces found in &ldquo;{activeSlotConfig.label}&rdquo;.
+                      No matching pieces found with current filters.
                     </p>
                     <Link
                       href="/"
@@ -291,8 +397,9 @@ export default function OutfitStudioPage() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {activeCategoryItems.map((item) => {
+                    {filteredCategoryItems.map((item) => {
                       const isSelected = currentSlotSelectedItems.some((i) => i.id === item.id);
+                      const itemColors = item.colors && item.colors.length > 0 ? item.colors : item.color ? [item.color] : [];
                       return (
                         <button
                           key={item.id}
@@ -317,9 +424,19 @@ export default function OutfitStudioPage() {
                           </div>
                           <div className="w-full text-center px-1 pt-1">
                             <p className="text-[11px] font-medium truncate">{item.name}</p>
-                            <p className="text-[9px] font-mono opacity-50 truncate">
-                              {item.color} • {item.material}
-                            </p>
+                            <div className="flex items-center justify-center gap-1 pt-0.5">
+                              {itemColors.map((colName) => (
+                                <span
+                                  key={colName}
+                                  className="w-2 h-2 rounded-full border border-white/20"
+                                  style={{ backgroundColor: getColorHex(colName) }}
+                                  title={colName}
+                                />
+                              ))}
+                              <span className="text-[9px] font-mono opacity-50 truncate ml-0.5">
+                                {item.material}
+                              </span>
+                            </div>
                           </div>
                         </button>
                       );

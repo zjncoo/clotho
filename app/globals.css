@@ -93,3 +93,25 @@ body {
 .dark .liquid-control:hover {
   background: rgba(255, 255, 255, 0.14);
 }
+
+@keyframes shimmerSweep {
+  0% {
+    transform: translateX(-100%) rotate(-15deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(120%) rotate(-15deg);
+    opacity: 0;
+  }
+}
+
+.animate-shimmer-sweep {
+  animation: shimmerSweep 1.4s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
+}
+
