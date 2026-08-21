@@ -81,6 +81,18 @@ export default function WardrobePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const backupInputRef = useRef<HTMLInputElement>(null);
 
+  // Lock body scroll when a modal is open
+  useEffect(() => {
+    if (pendingItem || editingItem) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [pendingItem, editingItem]);
+
   useEffect(() => {
     async function initStorage() {
       if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.persist) {
@@ -560,13 +572,13 @@ export default function WardrobePage() {
       {/* Expanded Card / Edit Item Modal (Multi-Color Swatch Selector) */}
       <AnimatePresence>
         {editingItem && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md overflow-hidden touch-none">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
               transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-              className="liquid-glass rounded-[2.5rem] max-w-md w-full p-6 space-y-5 shadow-2xl border border-white/20 dark:border-white/10 max-h-[90vh] overflow-y-auto"
+              className="liquid-glass rounded-[2.5rem] max-w-md w-full p-6 space-y-5 shadow-2xl border border-white/20 dark:border-white/10 max-h-[85vh] max-h-[85dvh] overflow-y-auto overscroll-contain flex flex-col"
             >
               {/* Modal Header */}
               <div className="flex justify-between items-center pb-2 border-b border-black/5 dark:border-white/5">
@@ -700,12 +712,12 @@ export default function WardrobePage() {
       {/* New Item Upload Form Modal (Multi-Color Swatch Selector) */}
       <AnimatePresence>
         {pendingItem && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-hidden touch-none">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              className="liquid-glass rounded-[2.5rem] max-w-md w-full p-6 space-y-5 shadow-2xl border border-white/20 dark:border-white/10 max-h-[90vh] overflow-y-auto"
+              className="liquid-glass rounded-[2.5rem] max-w-md w-full p-6 space-y-5 shadow-2xl border border-white/20 dark:border-white/10 max-h-[85vh] max-h-[85dvh] overflow-y-auto overscroll-contain flex flex-col"
             >
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">

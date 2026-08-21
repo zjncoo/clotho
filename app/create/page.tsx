@@ -66,6 +66,18 @@ export default function OutfitStudioPage() {
 
   const mannequinRef = useRef<HTMLDivElement>(null);
 
+  // Lock body scroll when drawer is open
+  useEffect(() => {
+    if (activeDrawerCategory) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [activeDrawerCategory]);
+
   useEffect(() => {
     async function loadCatalog() {
       const saved = await get<ClothingItem[]>(STORAGE_KEY);
@@ -157,7 +169,7 @@ export default function OutfitStudioPage() {
   );
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-6 pb-36 space-y-6">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-6 pb-28 sm:pb-32 space-y-6">
       {/* Action Header */}
       <div className="flex justify-between items-center border-b border-black/5 dark:border-white/5 pb-4">
         <div>
@@ -290,13 +302,13 @@ export default function OutfitStudioPage() {
       {/* Drawer / Bottom Sheet Modal with Filter by Color & Material */}
       <AnimatePresence>
         {activeDrawerCategory && activeSlotConfig && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-md overflow-hidden touch-none">
             <motion.div
               initial={{ y: '100%', opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: '100%', opacity: 0 }}
               transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-              className="w-full max-w-lg liquid-glass rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 max-h-[88vh] flex flex-col shadow-2xl border border-white/20 dark:border-white/10"
+              className="w-full max-w-lg liquid-glass rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 max-h-[85vh] max-h-[85dvh] flex flex-col shadow-2xl border border-white/20 dark:border-white/10 overscroll-contain"
             >
               {/* Drawer Header */}
               <div className="flex justify-between items-center pb-3 border-b border-black/5 dark:border-white/5">
