@@ -8,13 +8,10 @@ import {
   Download,
   RotateCcw,
   Loader2,
-  ChevronLeft,
-  ChevronRight,
-  Sparkles,
+  X,
   Check,
   Plus,
   Trash2,
-  Shirt,
   Layers,
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
@@ -22,77 +19,29 @@ import Link from 'next/link';
 
 const STORAGE_KEY = 'closet_catalog_items';
 
-interface StepConfig {
+interface SlotDefinition {
   category: Category;
   label: string;
   shortLabel: string;
-  description: string;
   icon: string;
 }
 
-const STEPS: StepConfig[] = [
-  {
-    category: 'headwear',
-    label: 'Headwear & Hats',
-    shortLabel: 'Hat',
-    description: 'Select a cap, beanie, or hat to top off your look',
-    icon: '🧢',
-  },
-  {
-    category: 'necklace',
-    label: 'Necklaces & Chains',
-    shortLabel: 'Necklace',
-    description: 'Add a pendant, chain, or statement necklace',
-    icon: '📿',
-  },
-  {
-    category: 'top',
-    label: 'Tops & Jackets',
-    shortLabel: 'Top',
-    description: 'Choose your t-shirt, shirt, hoodie, or outerwear',
-    icon: '👕',
-  },
-  {
-    category: 'bottom',
-    label: 'Pants & Skirts',
-    shortLabel: 'Bottom',
-    description: 'Pick jeans, trousers, shorts, or a skirt',
-    icon: '👖',
-  },
-  {
-    category: 'bracelet',
-    label: 'Bracelets & Watches',
-    shortLabel: 'Bracelet',
-    description: 'Add wristwear, a timepiece, or cuff',
-    icon: '⌚',
-  },
-  {
-    category: 'bag',
-    label: 'Bags & Backpacks',
-    shortLabel: 'Bag',
-    description: 'Choose your tote, crossbody, or backpack',
-    icon: '👜',
-  },
-  {
-    category: 'shoes',
-    label: 'Shoes & Footwear',
-    shortLabel: 'Shoes',
-    description: 'Select matching sneakers, boots, or shoes',
-    icon: '👟',
-  },
-  {
-    category: 'accessories',
-    label: 'Other Accessories',
-    shortLabel: 'Extras',
-    description: 'Complete the fit with sunglasses, belts, or rings',
-    icon: '🕶️',
-  },
+const SLOTS: SlotDefinition[] = [
+  { category: 'headwear', label: 'Headwear & Hats', shortLabel: 'Headwear', icon: '🧢' },
+  { category: 'necklace', label: 'Necklaces & Chains', shortLabel: 'Necklace', icon: '📿' },
+  { category: 'top', label: 'Tops & Outerwear', shortLabel: 'Tops', icon: '👕' },
+  { category: 'bottom', label: 'Pants & Skirts', shortLabel: 'Bottoms', icon: '👖' },
+  { category: 'bracelet', label: 'Bracelets & Watches', shortLabel: 'Bracelets', icon: '⌚' },
+  { category: 'bag', label: 'Bags & Backpacks', shortLabel: 'Bags', icon: '👜' },
+  { category: 'shoes', label: 'Shoes & Footwear', shortLabel: 'Shoes', icon: '👟' },
+  { category: 'accessories', label: 'Other Accessories', shortLabel: 'Extras', icon: '🕶️' },
 ];
 
 export default function OutfitStudioPage() {
   const [items, setItems] = useState<ClothingItem[]>([]);
-  const [outfit, setOutfit] = useState<Partial<Record<Category, ClothingItem>>>({});
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  // Multi-item selection per category: Record<Category, ClothingItem[]>
+  const [outfit, setOutfit] = useState<Partial<Record<Category, ClothingItem[]>>>({});
+  const [activeDrawerCategory, setActiveDrawerCategory] = useState<Category | null>(null);
   const [isExporting, setIsExporting] = useState(false);
 
   const mannequinRef = useRef<HTMLDivElement>(null);
@@ -105,37 +54,36 @@ export default function OutfitStudioPage() {
     loadCatalog();
   }, []);
 
-  const currentStep = STEPS[currentStepIndex];
-  const categoryItems = items.filter((i) => i.category === currentStep.category);
-  const selectedItemForCurrentStep = outfit[currentStep.category];
+  const activeSlotConfig = SLOTS.find((s) => s.category === activeDrawerCategory);
+  const activeCategoryItems = items.filter((i) => i.category === activeDrawerCategory);
+  const currentSlotSelectedItems = (activeDrawerCategory && outfit[activeDrawerCategory]) || [];
 
-  const handleSelectItem = (item: ClothingItem) => {
-    if (outfit[item.category]?.id === item.id) {
-      // Toggle off if already selected
-      setOutfit((prev) => {
-        const copy = { ...prev };
-        delete copy[item.category];
-        return copy;
-      });
+  // Toggle item in category (supports multiple items)
+  const toggleItemInSlot = (item: ClothingItem) => {
+    const cat = item.category;
+    const existing = outfit[cat] || [];
+    const isAlreadySelected = existing.some((i) => i.id === item.id);
+
+    if (isAlreadySelected) {
+      const updated = existing.filter((i) => i.id !== item.id);
+      setOutfit((prev) => ({
+        ...prev,
+        [cat]: updated.length > 0 ? updated : undefined,
+      }));
     } else {
-      setOutfit((prev) => ({ ...prev, [item.category]: item }));
+      setOutfit((prev) => ({
+        ...prev,
+        [cat]: [...existing, item],
+      }));
     }
   };
 
-  const handleClearSlot = (cat: Category) => {
+  const clearSlot = (cat: Category) => {
     setOutfit((prev) => {
       const copy = { ...prev };
       delete copy[cat];
       return copy;
     });
-  };
-
-  const handlePrevStep = () => {
-    setCurrentStepIndex((prev) => (prev > 0 ? prev - 1 : STEPS.length - 1));
-  };
-
-  const handleNextStep = () => {
-    setCurrentStepIndex((prev) => (prev < STEPS.length - 1 ? prev + 1 : 0));
   };
 
   const exportOutfitPNG = async () => {
@@ -147,7 +95,7 @@ export default function OutfitStudioPage() {
       const dataUrl = await toPng(mannequinRef.current, {
         cacheBust: true,
         pixelRatio: 3,
-        backgroundColor: '#0d0e11',
+        backgroundColor: '#0c0d10',
       });
       const link = document.createElement('a');
       link.download = `clotho-outfit-${Date.now()}.png`;
@@ -160,35 +108,36 @@ export default function OutfitStudioPage() {
     }
   };
 
-  const selectedCount = Object.keys(outfit).length;
+  // Total count of all items selected across all slots
+  const totalItemsCount = Object.values(outfit).reduce(
+    (acc, arr) => acc + (arr?.length || 0),
+    0
+  );
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-6 pb-36 space-y-6">
-      {/* Studio Header */}
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-6 pb-36 space-y-6">
+      {/* Action Header */}
       <div className="flex justify-between items-center border-b border-black/5 dark:border-white/5 pb-4">
         <div>
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-blue-500" />
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Outfit Studio</h1>
-          </div>
-          <p className="text-xs font-mono opacity-60 mt-0.5">
-            Step {currentStepIndex + 1} of {STEPS.length}: {currentStep.label} ({selectedCount} pieces selected)
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Studio</h1>
+          <p className="text-xs font-mono opacity-50 mt-0.5">
+            Tap any section on the mannequin to layer pieces ({totalItemsCount} total selected)
           </p>
         </div>
 
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => setOutfit({})}
-            disabled={selectedCount === 0}
-            className="text-xs font-mono opacity-60 hover:opacity-100 disabled:opacity-20 flex items-center gap-1 transition-opacity px-2.5 py-1.5 rounded-lg liquid-control"
+            disabled={totalItemsCount === 0}
+            className="text-xs font-mono opacity-60 hover:opacity-100 disabled:opacity-20 flex items-center gap-1 transition-opacity px-3 py-2 rounded-xl liquid-control"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Reset</span>
           </button>
           <button
             onClick={exportOutfitPNG}
-            disabled={selectedCount === 0 || isExporting}
-            className="liquid-control text-xs font-semibold tracking-wider uppercase px-4 py-2.5 rounded-full flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed shadow-md hover:scale-102 active:scale-95 transition-all"
+            disabled={totalItemsCount === 0 || isExporting}
+            className="liquid-control text-xs font-semibold tracking-wider uppercase px-4 py-2.5 rounded-full flex items-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed shadow-md active:scale-95 transition-all"
           >
             {isExporting ? <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" /> : <Download className="w-3.5 h-3.5" />}
             <span>Export PNG</span>
@@ -196,311 +145,283 @@ export default function OutfitStudioPage() {
         </div>
       </div>
 
-      {/* Main Studio Canvas: Center Outfit Composition */}
+      {/* Interactive Mannequin Canvas */}
       <div className="flex flex-col items-center">
         <div
           ref={mannequinRef}
           className="w-full max-w-md liquid-glass rounded-[2.5rem] p-5 sm:p-6 shadow-2xl border border-white/20 dark:border-white/10 relative overflow-hidden"
         >
-          {/* Subtle Ambient Background */}
-          <div className="absolute inset-0 bg-gradient-to-b from-blue-500/5 via-transparent to-purple-500/5 pointer-events-none" />
+          {/* Subtle Ambient Vignette */}
+          <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] via-transparent to-white/[0.02] pointer-events-none" />
 
-          {/* Mannequin Layers */}
+          {/* Mannequin Section Layout */}
           <div className="flex flex-col items-center gap-3 relative z-10">
             {/* 1. Headwear */}
-            <div
-              onClick={() => setCurrentStepIndex(0)}
-              className={`w-32 h-20 rounded-2xl liquid-control flex items-center justify-center p-1.5 cursor-pointer transition-all duration-300 ${
-                currentStepIndex === 0 ? 'ring-2 ring-blue-500 shadow-lg scale-105' : 'hover:scale-102'
-              }`}
-            >
-              {outfit.headwear ? (
-                <img
-                  src={outfit.headwear.image}
-                  alt={outfit.headwear.name}
-                  className="h-full w-full object-contain filter drop-shadow-md"
-                />
-              ) : (
-                <span className="text-[10px] font-mono tracking-wider uppercase opacity-40 select-none">
-                  + Headwear
-                </span>
-              )}
-            </div>
+            <MannequinSlotButton
+              slotKey="headwear"
+              title="Headwear"
+              icon="🧢"
+              items={outfit.headwear}
+              onClick={() => setActiveDrawerCategory('headwear')}
+              className="w-36 h-20"
+            />
 
-            {/* 2. Necklace (Directly under headwear / on collar) */}
-            <div
-              onClick={() => setCurrentStepIndex(1)}
-              className={`w-28 h-14 rounded-2xl liquid-control flex items-center justify-center p-1 -mt-1 cursor-pointer transition-all duration-300 z-20 ${
-                currentStepIndex === 1 ? 'ring-2 ring-blue-500 shadow-lg scale-105' : 'hover:scale-102'
-              }`}
-            >
-              {outfit.necklace ? (
-                <img
-                  src={outfit.necklace.image}
-                  alt={outfit.necklace.name}
-                  className="h-full w-full object-contain filter drop-shadow-md"
-                />
-              ) : (
-                <span className="text-[9px] font-mono tracking-wider uppercase opacity-40 select-none">
-                  + Necklace
-                </span>
-              )}
-            </div>
+            {/* 2. Necklace (Directly below headwear) */}
+            <MannequinSlotButton
+              slotKey="necklace"
+              title="Necklace"
+              icon="📿"
+              items={outfit.necklace}
+              onClick={() => setActiveDrawerCategory('necklace')}
+              className="w-32 h-14 -mt-1 z-20"
+            />
 
-            {/* Middle Section: Top with Side Slots for Bag & Bracelet */}
+            {/* Middle Row: Bag + Tops + Bracelet */}
             <div className="w-full flex items-center justify-between gap-2.5">
-              {/* Left Side: Bag */}
-              <div
-                onClick={() => setCurrentStepIndex(5)}
-                className={`w-20 h-24 rounded-2xl liquid-control flex items-center justify-center p-1.5 cursor-pointer transition-all duration-300 ${
-                  currentStepIndex === 5 ? 'ring-2 ring-blue-500 shadow-lg scale-105' : 'hover:scale-102'
-                }`}
-              >
-                {outfit.bag ? (
-                  <img
-                    src={outfit.bag.image}
-                    alt={outfit.bag.name}
-                    className="h-full w-full object-contain filter drop-shadow-md"
-                  />
-                ) : (
-                  <span className="text-[9px] font-mono tracking-wider uppercase opacity-40 select-none text-center">
-                    + Bag
-                  </span>
-                )}
-              </div>
+              {/* Bag Slot */}
+              <MannequinSlotButton
+                slotKey="bag"
+                title="Bag"
+                icon="👜"
+                items={outfit.bag}
+                onClick={() => setActiveDrawerCategory('bag')}
+                className="w-20 h-28"
+              />
 
-              {/* Center: Top / Jacket */}
-              <div
-                onClick={() => setCurrentStepIndex(2)}
-                className={`flex-1 h-44 rounded-2xl liquid-control flex items-center justify-center p-2 cursor-pointer transition-all duration-300 ${
-                  currentStepIndex === 2 ? 'ring-2 ring-blue-500 shadow-lg scale-105' : 'hover:scale-102'
-                }`}
-              >
-                {outfit.top ? (
-                  <img
-                    src={outfit.top.image}
-                    alt={outfit.top.name}
-                    className="h-full w-full object-contain filter drop-shadow-md"
-                  />
-                ) : (
-                  <span className="text-[11px] font-mono tracking-wider uppercase opacity-40 select-none">
-                    + Top / Jacket
-                  </span>
-                )}
-              </div>
+              {/* Tops / Outerwear Slot */}
+              <MannequinSlotButton
+                slotKey="top"
+                title="Tops & Jackets"
+                icon="👕"
+                items={outfit.top}
+                onClick={() => setActiveDrawerCategory('top')}
+                className="flex-1 h-44"
+              />
 
-              {/* Right Side: Bracelet / Watch */}
-              <div
-                onClick={() => setCurrentStepIndex(4)}
-                className={`w-20 h-24 rounded-2xl liquid-control flex items-center justify-center p-1.5 cursor-pointer transition-all duration-300 ${
-                  currentStepIndex === 4 ? 'ring-2 ring-blue-500 shadow-lg scale-105' : 'hover:scale-102'
-                }`}
-              >
-                {outfit.bracelet ? (
-                  <img
-                    src={outfit.bracelet.image}
-                    alt={outfit.bracelet.name}
-                    className="h-full w-full object-contain filter drop-shadow-md"
-                  />
-                ) : (
-                  <span className="text-[9px] font-mono tracking-wider uppercase opacity-40 select-none text-center">
-                    + Bracelet
-                  </span>
-                )}
-              </div>
+              {/* Bracelet Slot */}
+              <MannequinSlotButton
+                slotKey="bracelet"
+                title="Bracelet"
+                icon="⌚"
+                items={outfit.bracelet}
+                onClick={() => setActiveDrawerCategory('bracelet')}
+                className="w-20 h-28"
+              />
             </div>
 
-            {/* 4. Bottoms (Pants / Skirt) */}
-            <div
-              onClick={() => setCurrentStepIndex(3)}
-              className={`w-3/4 h-44 rounded-2xl liquid-control flex items-center justify-center p-2 cursor-pointer transition-all duration-300 ${
-                currentStepIndex === 3 ? 'ring-2 ring-blue-500 shadow-lg scale-105' : 'hover:scale-102'
-              }`}
-            >
-              {outfit.bottom ? (
-                <img
-                  src={outfit.bottom.image}
-                  alt={outfit.bottom.name}
-                  className="h-full w-full object-contain filter drop-shadow-md"
-                />
-              ) : (
-                <span className="text-[11px] font-mono tracking-wider uppercase opacity-40 select-none">
-                  + Pants / Skirt
-                </span>
-              )}
-            </div>
+            {/* 4. Pants & Skirts */}
+            <MannequinSlotButton
+              slotKey="bottom"
+              title="Pants & Skirts"
+              icon="👖"
+              items={outfit.bottom}
+              onClick={() => setActiveDrawerCategory('bottom')}
+              className="w-4/5 h-44"
+            />
 
-            {/* Bottom Row: Shoes & Extras */}
+            {/* Bottom Row: Shoes + Extras */}
             <div className="w-full flex items-center justify-center gap-3">
-              {/* 7. Shoes */}
-              <div
-                onClick={() => setCurrentStepIndex(6)}
-                className={`w-44 h-24 rounded-2xl liquid-control flex items-center justify-center p-1.5 cursor-pointer transition-all duration-300 ${
-                  currentStepIndex === 6 ? 'ring-2 ring-blue-500 shadow-lg scale-105' : 'hover:scale-102'
-                }`}
-              >
-                {outfit.shoes ? (
-                  <img
-                    src={outfit.shoes.image}
-                    alt={outfit.shoes.name}
-                    className="h-full w-full object-contain filter drop-shadow-md"
-                  />
-                ) : (
-                  <span className="text-[10px] font-mono tracking-wider uppercase opacity-40 select-none">
-                    + Shoes
-                  </span>
-                )}
-              </div>
+              {/* Shoes */}
+              <MannequinSlotButton
+                slotKey="shoes"
+                title="Shoes"
+                icon="👟"
+                items={outfit.shoes}
+                onClick={() => setActiveDrawerCategory('shoes')}
+                className="w-44 h-24"
+              />
 
-              {/* 8. Other Accessories */}
-              <div
-                onClick={() => setCurrentStepIndex(7)}
-                className={`w-28 h-24 rounded-2xl liquid-control flex items-center justify-center p-1.5 cursor-pointer transition-all duration-300 ${
-                  currentStepIndex === 7 ? 'ring-2 ring-blue-500 shadow-lg scale-105' : 'hover:scale-102'
-                }`}
-              >
-                {outfit.accessories ? (
-                  <img
-                    src={outfit.accessories.image}
-                    alt={outfit.accessories.name}
-                    className="h-full w-full object-contain filter drop-shadow-md"
-                  />
-                ) : (
-                  <span className="text-[9px] font-mono tracking-wider uppercase opacity-40 select-none text-center">
-                    + Extras
-                  </span>
-                )}
-              </div>
+              {/* Extras */}
+              <MannequinSlotButton
+                slotKey="accessories"
+                title="Accessories"
+                icon="🕶️"
+                items={outfit.accessories}
+                onClick={() => setActiveDrawerCategory('accessories')}
+                className="w-28 h-24"
+              />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Step Navigator Bar & Item Selector Carousel */}
-      <div className="liquid-glass rounded-[2rem] p-4 sm:p-5 space-y-4 shadow-xl border border-white/20 dark:border-white/10">
-        {/* Step Header with Navigation Arrows */}
-        <div className="flex items-center justify-between gap-3">
-          <button
-            onClick={handlePrevStep}
-            aria-label="Previous step"
-            className="liquid-control p-2.5 rounded-2xl hover:scale-105 active:scale-95 transition-all flex items-center gap-1 text-xs font-medium"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Prev</span>
-          </button>
-
-          <div className="text-center flex-1">
-            <div className="flex items-center justify-center gap-2">
-              <span className="text-lg">{currentStep.icon}</span>
-              <h2 className="text-base font-bold tracking-tight">{currentStep.label}</h2>
-            </div>
-            <p className="text-xs font-mono opacity-60 truncate">{currentStep.description}</p>
-          </div>
-
-          <button
-            onClick={handleNextStep}
-            aria-label="Next step"
-            className="liquid-control p-2.5 rounded-2xl hover:scale-105 active:scale-95 transition-all flex items-center gap-1 text-xs font-medium"
-          >
-            <span className="hidden sm:inline">Next</span>
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Step Indicator Pills */}
-        <div className="flex items-center justify-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-          {STEPS.map((step, idx) => {
-            const isFilled = !!outfit[step.category];
-            const isActive = idx === currentStepIndex;
-            return (
-              <button
-                key={step.category}
-                onClick={() => setCurrentStepIndex(idx)}
-                className={`px-3 py-1.5 rounded-full text-xs font-mono transition-all flex items-center gap-1 ${
-                  isActive
-                    ? 'bg-blue-600 text-white shadow-md font-semibold scale-105'
-                    : isFilled
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                    : 'liquid-control opacity-50 hover:opacity-100'
-                }`}
-              >
-                <span>{step.icon}</span>
-                <span className="hidden md:inline">{step.shortLabel}</span>
-                {isFilled && <Check className="w-2.5 h-2.5" />}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Step Item Selector Area */}
-        <div className="pt-2 border-t border-black/5 dark:border-white/5">
-          {selectedItemForCurrentStep && (
-            <div className="mb-3 flex items-center justify-between p-2.5 liquid-control rounded-2xl">
-              <div className="flex items-center gap-3">
-                <img
-                  src={selectedItemForCurrentStep.image}
-                  alt={selectedItemForCurrentStep.name}
-                  className="w-10 h-10 object-contain"
-                />
-                <div>
-                  <p className="text-xs font-semibold">{selectedItemForCurrentStep.name}</p>
-                  <p className="text-[10px] font-mono opacity-60">
-                    {selectedItemForCurrentStep.color} • {selectedItemForCurrentStep.material}
-                  </p>
+      {/* Drawer / Bottom Sheet Modal for Direct Multi-Selection */}
+      <AnimatePresence>
+        {activeDrawerCategory && activeSlotConfig && (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-md">
+            <motion.div
+              initial={{ y: '100%', opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: '100%', opacity: 0 }}
+              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+              className="w-full max-w-lg liquid-glass rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 max-h-[85vh] flex flex-col shadow-2xl border border-white/20 dark:border-white/10"
+            >
+              {/* Drawer Header */}
+              <div className="flex justify-between items-center pb-3 border-b border-black/5 dark:border-white/5">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-xl">{activeSlotConfig.icon}</span>
+                  <div>
+                    <h2 className="text-lg font-bold tracking-tight">{activeSlotConfig.label}</h2>
+                    <p className="text-xs font-mono opacity-50">
+                      {currentSlotSelectedItems.length} selected (multi-select enabled)
+                    </p>
+                  </div>
                 </div>
+                <button
+                  onClick={() => setActiveDrawerCategory(null)}
+                  className="p-2 liquid-control rounded-full hover:opacity-70"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-              <button
-                onClick={() => handleClearSlot(currentStep.category)}
-                className="text-xs text-red-400 hover:text-red-300 font-mono px-3 py-1.5 rounded-xl liquid-control"
-              >
-                Remove from slot
-              </button>
+
+              {/* Drawer Content */}
+              <div className="flex-1 overflow-y-auto py-4 pr-1">
+                {activeCategoryItems.length === 0 ? (
+                  <div className="p-8 text-center border border-dashed border-black/10 dark:border-white/10 rounded-2xl space-y-2">
+                    <p className="text-xs font-mono opacity-50">
+                      No pieces found in &ldquo;{activeSlotConfig.label}&rdquo;.
+                    </p>
+                    <Link
+                      href="/"
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-400 hover:underline pt-1"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Add one in your Wardrobe
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {activeCategoryItems.map((item) => {
+                      const isSelected = currentSlotSelectedItems.some((i) => i.id === item.id);
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => toggleItemInSlot(item)}
+                          className={`aspect-square p-2.5 rounded-2xl liquid-control flex flex-col items-center justify-between transition-all relative ${
+                            isSelected
+                              ? 'ring-2 ring-blue-500 bg-blue-500/10 shadow-lg scale-[0.98]'
+                              : 'hover:scale-[1.02] hover:shadow-md'
+                          }`}
+                        >
+                          {isSelected && (
+                            <div className="absolute top-2 right-2 bg-blue-500 text-white p-1 rounded-full shadow-md z-10">
+                              <Check className="w-3 h-3" />
+                            </div>
+                          )}
+                          <div className="flex-1 w-full flex items-center justify-center overflow-hidden p-1">
+                            <img
+                              src={item.image}
+                              alt={item.name}
+                              className="max-h-full max-w-full object-contain filter drop-shadow-sm"
+                            />
+                          </div>
+                          <div className="w-full text-center px-1 pt-1">
+                            <p className="text-[11px] font-medium truncate">{item.name}</p>
+                            <p className="text-[9px] font-mono opacity-50 truncate">
+                              {item.color} • {item.material}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Drawer Footer Actions */}
+              <div className="flex items-center gap-3 pt-3 border-t border-black/5 dark:border-white/5">
+                {currentSlotSelectedItems.length > 0 && (
+                  <button
+                    onClick={() => clearSlot(activeDrawerCategory)}
+                    className="py-3 px-4 text-xs font-mono text-red-400 hover:text-red-300 liquid-control rounded-2xl"
+                  >
+                    Clear Slot
+                  </button>
+                )}
+                <button
+                  onClick={() => setActiveDrawerCategory(null)}
+                  className="flex-1 py-3 text-xs font-semibold uppercase tracking-wider bg-blue-600 hover:bg-blue-500 text-white rounded-2xl shadow-lg transition-all"
+                >
+                  Done ({currentSlotSelectedItems.length})
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// Reusable Component for Each Mannequin Slot
+function MannequinSlotButton({
+  slotKey,
+  title,
+  icon,
+  items,
+  onClick,
+  className = '',
+}: {
+  slotKey: Category;
+  title: string;
+  icon: string;
+  items?: ClothingItem[];
+  onClick: () => void;
+  className?: string;
+}) {
+  const hasItems = items && items.length > 0;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-2xl liquid-control flex items-center justify-center p-1.5 cursor-pointer transition-all duration-300 hover:scale-[1.02] active:scale-95 relative overflow-hidden group ${
+        hasItems ? 'border-white/30 dark:border-white/20' : 'border-dashed'
+      } ${className}`}
+    >
+      {hasItems ? (
+        <div className="w-full h-full flex items-center justify-center relative">
+          {items.length === 1 ? (
+            <img
+              src={items[0].image}
+              alt={items[0].name}
+              className="h-full w-full object-contain filter drop-shadow-md transition-transform duration-300 group-hover:scale-105"
+            />
+          ) : (
+            // Multi-item layered preview
+            <div className="w-full h-full flex items-center justify-center relative">
+              {items.map((item, idx) => (
+                <img
+                  key={item.id}
+                  src={item.image}
+                  alt={item.name}
+                  style={{
+                    transform: `translateX(${(idx - (items.length - 1) / 2) * 14}px) scale(${
+                      1 - idx * 0.05
+                    })`,
+                    zIndex: idx + 1,
+                  }}
+                  className="absolute max-h-full max-w-[85%] object-contain filter drop-shadow-md"
+                />
+              ))}
             </div>
           )}
 
-          {categoryItems.length === 0 ? (
-            <div className="p-8 text-center border border-dashed border-black/10 dark:border-white/10 rounded-2xl space-y-2">
-              <p className="text-xs font-mono opacity-50">
-                No items saved under &ldquo;{currentStep.label}&rdquo; in your wardrobe yet.
-              </p>
-              <Link
-                href="/"
-                className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-400 hover:underline pt-1"
-              >
-                <Plus className="w-3.5 h-3.5" /> Go to Wardrobe to add one
-              </Link>
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 max-h-48 overflow-y-auto pr-1">
-              {categoryItems.map((item) => {
-                const isSelected = outfit[currentStep.category]?.id === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => handleSelectItem(item)}
-                    className={`aspect-square p-2 rounded-2xl liquid-control flex flex-col items-center justify-between transition-all ${
-                      isSelected
-                        ? 'ring-2 ring-blue-500 bg-blue-500/10 shadow-lg scale-95'
-                        : 'hover:scale-102 hover:shadow-md'
-                    }`}
-                  >
-                    <div className="flex-1 w-full flex items-center justify-center overflow-hidden">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="max-h-full max-w-full object-contain filter drop-shadow-sm"
-                      />
-                    </div>
-                    <span className="text-[10px] font-medium opacity-80 mt-1 truncate w-full text-center">
-                      {item.name}
-                    </span>
-                  </button>
-                );
-              })}
+          {/* Multi-item badge count */}
+          {items.length > 1 && (
+            <div className="absolute bottom-1 right-1 bg-black/80 text-white text-[9px] font-mono px-1.5 py-0.5 rounded-full z-30 shadow-md">
+              {items.length}
             </div>
           )}
         </div>
-      </div>
-    </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center opacity-40 select-none text-center px-1">
+          <span className="text-xs">{icon}</span>
+          <span className="text-[9px] font-mono tracking-wider uppercase truncate mt-0.5">
+            + {title}
+          </span>
+        </div>
+      )}
+    </button>
   );
 }

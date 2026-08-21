@@ -1,29 +1,33 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --bg-gradient: radial-gradient(circle at 10% 20%, rgba(220, 225, 235, 0.8), rgba(245, 247, 250, 0.95)),
-                 radial-gradient(circle at 80% 80%, rgba(210, 230, 245, 0.6), rgba(255, 255, 255, 1));
-  --text-primary: #1d1d1f;
-  --text-secondary: #86868b;
-  --bg-solid: #f5f7fa;
+  --bg-gradient: radial-gradient(circle at 10% 20%, rgba(225, 228, 235, 0.85), rgba(248, 249, 252, 0.98)),
+                 radial-gradient(circle at 80% 80%, rgba(215, 225, 238, 0.7), rgba(255, 255, 255, 1));
+  --text-primary: #121316;
+  --text-secondary: #71717a;
+  --bg-solid: #f4f5f8;
 }
 
 .dark {
-  --bg-gradient: radial-gradient(circle at 15% 15%, #18191d, #0d0e11),
-                 radial-gradient(circle at 85% 85%, #1f232b, #000000);
-  --text-primary: #f5f5f7;
-  --text-secondary: #a1a1a6;
-  --bg-solid: #0d0e11;
+  --bg-gradient: radial-gradient(circle at 20% 20%, #16171b, #0c0d10),
+                 radial-gradient(circle at 80% 80%, #1c1e24, #08090a);
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --bg-solid: #0c0d10;
 }
 
 html {
   background-color: var(--bg-solid);
   min-height: 100%;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
 body {
+  font-family: 'Neue Haas Grotesk Display Pro', 'Plus Jakarta Sans', 'Helvetica Neue', -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--bg-gradient);
   background-color: var(--bg-solid);
   background-attachment: fixed;
@@ -34,7 +38,8 @@ body {
   padding-bottom: env(safe-area-inset-bottom, 0px);
   padding-left: env(safe-area-inset-left, 0px);
   padding-right: env(safe-area-inset-right, 0px);
-  transition: background 0.4s ease, color 0.4s ease;
+  transition: background 0.3s ease, color 0.3s ease;
+  letter-spacing: -0.015em;
 }
 
 .scrollbar-none {

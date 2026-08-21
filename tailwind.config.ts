@@ -8,7 +8,12 @@ const config: Config = {
     './app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        sans: ['"Neue Haas Grotesk Display Pro"', '"Plus Jakarta Sans"', '"Helvetica Neue"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        mono: ['"SF Mono"', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+      },
+    },
   },
   plugins: [],
 };
