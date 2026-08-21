@@ -19,6 +19,7 @@ export default function FeedbackModal({
   const { accent } = useTheme();
   const [name, setName] = useState(defaultUserName || '');
   const [type, setType] = useState<'Bug Report' | 'Feature Request'>('Bug Report');
+  const [severity, setSeverity] = useState('Minor Issue');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [sent, setSent] = useState(false);
@@ -28,7 +29,14 @@ export default function FeedbackModal({
     setTitle('');
     setDescription('');
     setType('Bug Report');
+    setSeverity('Minor Issue');
     setSent(false);
+  };
+
+  // Auto-update severity default when switching type
+  const handleTypeChange = (newType: 'Bug Report' | 'Feature Request') => {
+    setType(newType);
+    setSeverity(newType === 'Feature Request' ? 'Not applicable (Feature Request)' : 'Minor Issue');
   };
 
   const handleClose = () => {
@@ -42,24 +50,25 @@ export default function FeedbackModal({
 
     setIsSending(true);
 
-    // Store feedback locally in localStorage (simple, no external deps)
     try {
-      const feedbackEntry = {
-        id: crypto.randomUUID(),
-        type,
-        name: name.trim() || 'Anonymous',
-        title: title.trim(),
-        description: description.trim(),
-        createdAt: new Date().toISOString(),
-        appVersion: '1.0',
-      };
+      const FORM_URL =
+        'https://docs.google.com/forms/d/e/1FAIpQLScSW6xMeWlTXyS0oqqmIN3SIVP7UcDFvv-AmVwHWYmN1OkjGQ/formResponse';
 
-      const existing = JSON.parse(localStorage.getItem('clotho_feedback') || '[]');
-      existing.push(feedbackEntry);
-      localStorage.setItem('clotho_feedback', JSON.stringify(existing));
+      const formData = new FormData();
+      formData.append('entry.1480687685', name.trim() || 'Anonymous');
+      formData.append('entry.1458165487', type);
+      formData.append('entry.1914202640', title.trim());
+      formData.append('entry.1667427179', description.trim());
+      formData.append('entry.1802992486', severity);
 
-      // Simulate a brief "sending" delay for UX
-      await new Promise((r) => setTimeout(r, 800));
+      // no-cors is required to avoid CORS errors with Google Forms.
+      // The request still reaches Google even though we can't read the response.
+      await fetch(FORM_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        body: formData,
+      });
+
       setSent(true);
       setIsSending(false);
     } catch {
@@ -90,7 +99,7 @@ export default function FeedbackModal({
                 <div>
                   <h2 className="text-lg font-bold tracking-tight">Thank you!</h2>
                   <p className="text-xs font-mono opacity-50 mt-1 leading-relaxed">
-                    Your {type.toLowerCase()} has been saved.<br />
+                    Your {type.toLowerCase()} has been sent.<br />
                     We'll review it in the next update.
                   </p>
                 </div>
@@ -148,7 +157,7 @@ export default function FeedbackModal({
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
-                        onClick={() => setType('Bug Report')}
+                        onClick={() => handleTypeChange('Bug Report')}
                         className={`p-2.5 rounded-xl font-sans text-xs font-semibold flex items-center justify-center gap-2 transition-all border ${
                           type === 'Bug Report'
                             ? 'bg-red-50 dark:bg-red-950 text-red-500 border-red-300 dark:border-red-800'
@@ -160,7 +169,7 @@ export default function FeedbackModal({
                       </button>
                       <button
                         type="button"
-                        onClick={() => setType('Feature Request')}
+                        onClick={() => handleTypeChange('Feature Request')}
                         className={`p-2.5 rounded-xl font-sans text-xs font-semibold flex items-center justify-center gap-2 transition-all border ${
                           type === 'Feature Request'
                             ? 'bg-blue-50 dark:bg-blue-950 text-blue-500 border-blue-300 dark:border-blue-800'
@@ -171,6 +180,21 @@ export default function FeedbackModal({
                         <span>Feature Request</span>
                       </button>
                     </div>
+                  </div>
+
+                  {/* Severity selector */}
+                  <div className="space-y-1.5">
+                    <label className="opacity-40 uppercase tracking-wider text-[10px] font-bold">Severity</label>
+                    <select
+                      value={severity}
+                      onChange={(e) => setSeverity(e.target.value)}
+                      className="w-full rounded-xl px-3.5 py-2.5 text-xs font-sans bg-black/5 dark:bg-white/5 border border-black/8 dark:border-white/8 focus:outline-none"
+                    >
+                      <option>Not applicable (Feature Request)</option>
+                      <option>Minor Issue</option>
+                      <option>Major Issue</option>
+                      <option>Critical (App is unusable)</option>
+                    </select>
                   </div>
 
                   {/* Title */}
